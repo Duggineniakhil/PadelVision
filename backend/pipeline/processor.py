@@ -21,7 +21,7 @@ import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 import cv2
-from utils import get_video_fps, read_video, save_video
+from utils import get_video_fps, read_video, save_video, save_highlights_video
 from utils.player_stats_drawer_utils import draw_player_stats
 
 from pipeline.detectors import detect_players, detect_ball
@@ -167,6 +167,13 @@ def process_video(
     video_out_path = os.path.join(output_dir, "video.avi")
     save_video(output_frames, video_out_path, fps=fps)
 
+    _progress("Saving highlights reel", 92)
+    highlights_out_path = os.path.join(output_dir, "highlights.avi")
+    if highlights:
+        save_highlights_video(output_frames, highlights, highlights_out_path, fps=fps)
+    else:
+        highlights_out_path = None
+
     # ── 11. Save analysis.json ────────────────────────────────────────────────
     _progress("Saving analysis", 95)
     analysis = {
@@ -189,6 +196,7 @@ def process_video(
         "analysis_path": analysis_path,
         "heatmap_paths": heatmap_paths,
         "shot_map_path": shot_map_path,
+        "highlights_video_path": highlights_out_path,
         "stats": analysis,
         "highlights": highlights,
     }

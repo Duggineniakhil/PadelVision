@@ -260,6 +260,15 @@ video_filename = list(uploaded.keys())[0]
 
 # 5. Run the pipeline
 import sys
+import torch
+
+# PyTorch 2.6 compatibility patch for older Ultralytics models
+_original_load = torch.load
+def patched_load(*args, **kwargs):
+    kwargs['weights_only'] = False
+    return _original_load(*args, **kwargs)
+torch.load = patched_load
+
 sys.path.append('.')
 from pipeline.processor import process_video
 result = process_video(input_path=video_filename, job_id="colab_run", use_stubs=False)
@@ -267,9 +276,14 @@ result = process_video(input_path=video_filename, job_id="colab_run", use_stubs=
 # 6. Download outputs
 files.download(result['video_path'])
 files.download(result['analysis_path'])
-files.download(result['heatmap_paths']['p1'])
-files.download(result['heatmap_paths']['p2'])
 files.download(result['shot_map_path'])
+
+if result.get('highlights_video_path'):
+    files.download(result['highlights_video_path'])
+
+for player_key in ['player_1', 'player_2', 'player_3', 'player_4']:
+    if player_key in result['heatmap_paths']:
+        files.download(result['heatmap_paths'][player_key])
 ```
 
 ---

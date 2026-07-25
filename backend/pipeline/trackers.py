@@ -82,10 +82,9 @@ def convert_to_mini_court_coordinates(
 
     mapper = CourtMapper(court_keypoints, mini_court)
 
-    is_identity = mapper.homography_matrix is not None and \
-        np.allclose(mapper.homography_matrix, np.eye(3))
-    if is_identity:
-        logger.warning("Homography is identity — coordinate mapping will be incorrect")
+    if not mapper.is_valid:
+        logger.info("Keypoint-based homography unavailable — estimating from player positions")
+        mapper.estimate_from_player_positions(player_detections)
 
     output_player_boxes = []
     output_ball_boxes = []

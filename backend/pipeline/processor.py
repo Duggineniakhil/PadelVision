@@ -125,6 +125,8 @@ def process_video(
     # ── 3. Court keypoints ────────────────────────────────────────────────────
     _progress("Detecting court keypoints", 30)
     court_keypoints, court_detector = detect_court_keypoints(video_frames[0])
+    logger.info("Court keypoints result: %s",
+                {k: len(v) for k, v in court_keypoints.items()} if court_keypoints else "empty")
 
     # ── 4. Filter players, interpolate ball, detect shots ─────────────────────
     _progress("Filtering & interpolating", 35)

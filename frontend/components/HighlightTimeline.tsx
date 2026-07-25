@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, PlayCircle, Zap, MoreVertical } from "lucide-react";
+import { Flame, PlayCircle, MoreVertical } from "lucide-react";
 
 interface Highlight {
   start_frame: number;
@@ -15,13 +15,6 @@ interface HighlightTimelineProps {
 }
 
 export default function HighlightTimeline({ highlights = [], onSelectHighlight }: HighlightTimelineProps) {
-  // Fallback defaults if highlights list is empty
-  const displayHighlights: Highlight[] = highlights.length > 0 ? highlights : [
-    { start_frame: 120, end_frame: 340, timestamp_seconds: 14, label: "Long Rally #1" },
-    { start_frame: 450, end_frame: 620, timestamp_seconds: 42, label: "Long Rally #2" },
-    { start_frame: 780, end_frame: 910, timestamp_seconds: 78, label: "Fast Serve Ace" },
-  ];
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -36,12 +29,18 @@ export default function HighlightTimeline({ highlights = [], onSelectHighlight }
           <span>Highlights</span>
         </h3>
         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#0250B0]/30 text-[#C6D0DD] border border-[#0250B0]/40">
-          {displayHighlights.length} rallies
+          {highlights.length} rallies
         </span>
       </div>
 
       <div className="space-y-3 overflow-y-auto max-h-[600px] pr-1 custom-scrollbar">
-        {displayHighlights.map((highlight, idx) => (
+        {highlights.length === 0 && (
+          <div className="p-4 rounded-xl bg-[#131B2E] border border-[#1E2A40] text-sm text-[#8E9BAE]">
+            No highlights were detected for this analysis.
+          </div>
+        )}
+
+        {highlights.map((highlight, idx) => (
           <div
             key={idx}
             onClick={() => onSelectHighlight?.(highlight)}
@@ -58,7 +57,7 @@ export default function HighlightTimeline({ highlights = [], onSelectHighlight }
                 </h4>
                 <div className="flex items-center gap-2 text-xs text-[#8E9BAE] mt-0.5 font-mono">
                   <span>{formatTime(highlight.timestamp_seconds)}</span>
-                  <span>•</span>
+                  <span>/</span>
                   <span>Frames {highlight.start_frame}-{highlight.end_frame}</span>
                 </div>
               </div>

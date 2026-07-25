@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Crosshair, BarChart3, Trophy, Share2, Users, User } from "lucide-react";
+import { Home, Crosshair, BarChart3, Trophy, Share2, Users } from "lucide-react";
 
 interface SidebarProps {
   activeTab: string;

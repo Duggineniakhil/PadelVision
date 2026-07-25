@@ -57,6 +57,8 @@ def get_analysis(job_id: str):
         base.heatmap_p3_url = r.get("heatmap_p3_url")
         base.heatmap_p4_url = r.get("heatmap_p4_url")
         base.shot_map_url = r.get("shot_map_url")
+        base.total_frames = r.get("total_frames")
+        base.fps = r.get("fps")
 
         for i in range(1, 5):
             p = r.get(f"player_{i}")

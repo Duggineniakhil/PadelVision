@@ -16,7 +16,7 @@ A match video is either submitted through the web dashboard (drag-and-drop uploa
 
 - Uses **YOLOv8x** (`yolov8x.pt`) to detect every person visible in each frame.
 - The `.track()` method from Ultralytics is used to assign persistent tracking IDs to players across frames (`persist=True`).
-- After tracking, the two players closest to the detected court keypoints are selected and remapped to fixed IDs of **Player 1** and **Player 2** — any other detected people (e.g., ball boys, chair umpires) are filtered out.
+- After tracking, the four players most consistently inside or near the detected court region are selected and remapped to fixed IDs of **Player 1**, **Player 2**, **Player 3**, and **Player 4**. Any other detected people, such as staff or spectators, are filtered out.
 - Bounding boxes are drawn on the output video frames labelling each player.
 
 ---
@@ -76,7 +76,7 @@ A match video is either submitted through the web dashboard (drag-and-drop uploa
 ### 8. Player Stats Overlay (HUD)
 
 - A semi-transparent stats table is rendered directly onto the bottom-right of each video frame using OpenCV.
-- Displayed in real time as the match progresses, showing Player 1 and Player 2 columns with:
+- Displayed in real time as the match progresses, showing Team A (Player 1 + Player 2) and Team B (Player 3 + Player 4) columns with:
   - Shot speed (last shot)
   - Player speed
   - Average shot speed

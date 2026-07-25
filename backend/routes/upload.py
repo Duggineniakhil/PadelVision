@@ -12,7 +12,6 @@ POST /api/upload
 import os
 import sys
 import uuid
-import shutil
 import logging
 import traceback
 
@@ -31,6 +30,8 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
 MAX_FILE_SIZE_MB = 500
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 
 def _run_pipeline(job_id: str, input_path: str):
@@ -61,6 +62,7 @@ def _run_pipeline(job_id: str, input_path: str):
             "player_4": result["stats"]["player_4"],
             "highlights": result["highlights"],
             "total_frames": result["stats"]["total_frames"],
+            "fps": result["stats"]["fps"],
         }
         complete_job(job_id, job_result)
         logger.info("Job %s completed successfully.", job_id)
@@ -87,9 +89,25 @@ async def upload_video(
     job_id = str(uuid.uuid4())
     save_path = os.path.join(UPLOADS_DIR, f"{job_id}{ext}")
 
-    # Stream file to disk
-    with open(save_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    # Stream file to disk while enforcing the documented upload limit.
+    bytes_written = 0
+    try:
+        with open(save_path, "wb") as f:
+            while True:
+                chunk = await file.read(UPLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
+                bytes_written += len(chunk)
+                if bytes_written > MAX_FILE_SIZE_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File is too large. Maximum size is {MAX_FILE_SIZE_MB}MB.",
+                    )
+                f.write(chunk)
+    except Exception:
+        if os.path.exists(save_path):
+            os.remove(save_path)
+        raise
 
     logger.info("Uploaded video saved to %s (job: %s)", save_path, job_id)
 

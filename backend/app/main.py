@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="PadelVision",
-    description="AI-powered tennis match video analysis API",
+    description="AI-powered padel match video analysis API",
     version="1.0.0",
     lifespan=lifespan,
 )

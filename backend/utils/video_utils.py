@@ -1,5 +1,7 @@
 import cv2
 
+DEFAULT_FPS = 24.0
+
 def read_video(video_path):
     cap = cv2.VideoCapture(video_path)
     frames = []
@@ -11,9 +13,19 @@ def read_video(video_path):
     cap.release()
     return frames
 
-def save_video(output_video_frames, output_video_path):
+def get_video_fps(video_path):
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    if not fps or fps <= 1:
+        return DEFAULT_FPS
+    return float(fps)
+
+def save_video(output_video_frames, output_video_path, fps=DEFAULT_FPS):
+    if not output_video_frames:
+        raise ValueError("Cannot save an empty video.")
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-    out = cv2.VideoWriter(output_video_path, fourcc, 24, (output_video_frames[0].shape[1], output_video_frames[0].shape[0]))
+    out = cv2.VideoWriter(output_video_path, fourcc, fps, (output_video_frames[0].shape[1], output_video_frames[0].shape[0]))
     for frame in output_video_frames:
         out.write(frame)
     out.release()

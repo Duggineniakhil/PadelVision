@@ -2,7 +2,7 @@
 pipeline/trackers.py
 
 Post-processing after raw detection:
-  - Filter to two active players using court keypoints
+  - Filter to four active players using court keypoints
   - Interpolate missing ball positions
   - Convert bounding boxes to mini-court coordinates
   - Detect ball shot frames
@@ -35,7 +35,7 @@ def filter_players(
     player_detections: list,
 ) -> list[dict]:
     """
-    Keep only the two players closest to the court keypoints.
+    Keep only the four tracked players most consistently near the court.
     """
     return player_tracker.choose_and_filter_players(court_keypoints, player_detections)
 

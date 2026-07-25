@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { getStatus, getAnalysis } from "@/lib/api";
+import type { AnalysisData } from "@/lib/api";
 import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 
 interface StatusPollerProps {
   jobId: string;
-  onComplete: (data: any) => void;
+  onComplete: (data: AnalysisData) => void;
 }
 
 export default function StatusPoller({ jobId, onComplete }: StatusPollerProps) {
@@ -16,8 +17,6 @@ export default function StatusPoller({ jobId, onComplete }: StatusPollerProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
     const checkStatus = async () => {
       try {
         const data = await getStatus(jobId);
@@ -34,13 +33,13 @@ export default function StatusPoller({ jobId, onComplete }: StatusPollerProps) {
           const analysisData = await getAnalysis(jobId);
           setError(analysisData.error || "An error occurred during processing.");
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error polling status:", err);
       }
     };
 
     checkStatus();
-    intervalId = setInterval(checkStatus, 2500);
+    const intervalId = setInterval(checkStatus, 2500);
 
     return () => clearInterval(intervalId);
   }, [jobId, onComplete]);

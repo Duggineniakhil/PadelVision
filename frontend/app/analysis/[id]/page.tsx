@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import StatusPoller from "@/components/StatusPoller";
 import VideoPlayer from "@/components/VideoPlayer";
 import StatsPanel from "@/components/StatsPanel";
@@ -10,21 +10,21 @@ import ShotMap from "@/components/ShotMap";
 import HighlightTimeline from "@/components/HighlightTimeline";
 import BreadcrumbHeader from "@/components/BreadcrumbHeader";
 import Sidebar from "@/components/Sidebar";
+import type { AnalysisData, Highlight } from "@/lib/api";
 
 export default function AnalysisDashboard() {
   const params = useParams();
-  const router = useRouter();
   const jobId = params.id as string;
 
-  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [activeTab, setActiveTab] = useState<string>("home");
   const [seekTime, setSeekTime] = useState<number | null>(null);
 
-  const handleComplete = (data: any) => {
+  const handleComplete = (data: AnalysisData) => {
     setAnalysisData(data);
   };
 
-  const handleHighlightSelect = (highlight: any) => {
+  const handleHighlightSelect = (highlight: Highlight) => {
     setSeekTime(highlight.timestamp_seconds);
   };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Video, ChevronDown, Sparkles } from "lucide-react";
+import { Video, ChevronDown } from "lucide-react";
 
 export default function Navbar() {
   return (

@@ -21,7 +21,7 @@ import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 import cv2
-from utils import read_video, save_video
+from utils import get_video_fps, read_video, save_video
 from utils.player_stats_drawer_utils import draw_player_stats
 
 from pipeline.detectors import detect_players, detect_ball
@@ -90,7 +90,10 @@ def process_video(
     _progress("Reading video", 5)
     video_frames = read_video(input_path)
     total_frames = len(video_frames)
-    logger.info("Loaded %d frames from %s", total_frames, input_path)
+    if total_frames == 0:
+        raise ValueError("Input video contains no readable frames.")
+    fps = get_video_fps(input_path)
+    logger.info("Loaded %d frames at %.2f FPS from %s", total_frames, fps, input_path)
 
     # ── 2. Detect players & ball ──────────────────────────────────────────────
     _progress("Detecting players", 10)
@@ -131,6 +134,7 @@ def process_video(
         ball_mini_positions,
         ball_shot_frames,
         mini_court,
+        fps=fps,
     )
     frame_stats_df = stats_result.pop("frame_stats_df")
 
@@ -144,7 +148,7 @@ def process_video(
 
     # ── 9. Highlights ─────────────────────────────────────────────────────────
     _progress("Detecting highlights", 70)
-    highlights = generate_highlights(ball_shot_frames, ball_mini_positions, total_frames)
+    highlights = generate_highlights(ball_shot_frames, ball_mini_positions, total_frames, fps=fps)
 
     # ── 10. Render annotated video ─────────────────────────────────────────────
     _progress("Rendering output video", 75)
@@ -161,7 +165,7 @@ def process_video(
 
     _progress("Saving video", 90)
     video_out_path = os.path.join(output_dir, "video.avi")
-    save_video(output_frames, video_out_path)
+    save_video(output_frames, video_out_path, fps=fps)
 
     # ── 11. Save analysis.json ────────────────────────────────────────────────
     _progress("Saving analysis", 95)
@@ -172,6 +176,7 @@ def process_video(
         "player_4": stats_result.get("player_4", {}),
         "highlights": highlights,
         "total_frames": total_frames,
+        "fps": fps,
     }
     analysis_path = os.path.join(output_dir, "analysis.json")
     with open(analysis_path, "w") as f:

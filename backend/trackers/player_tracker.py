@@ -9,6 +9,22 @@ class PlayerTracker:
     def __init__(self,model_path):
         self.model = YOLO(model_path)
 
+    def _flatten_court_landmarks(self, court_landmarks):
+        points = []
+        if isinstance(court_landmarks, dict):
+            values = court_landmarks.values()
+        else:
+            values = court_landmarks or []
+
+        for value in values:
+            if isinstance(value, (list, tuple)) and len(value) == 2 and all(isinstance(v, (int, float)) for v in value):
+                points.append(value)
+            elif isinstance(value, (list, tuple)):
+                for point in value:
+                    if isinstance(point, (list, tuple)) and len(point) >= 2:
+                        points.append((point[0], point[1]))
+        return points
+
     def choose_and_filter_players(self, court_landmarks, player_detections):
         chosen_players = self.choose_players(court_landmarks, player_detections)
         filtered_player_detections = []
@@ -22,8 +38,9 @@ class PlayerTracker:
 
     def choose_players(self, court_landmarks, player_detections):
         # Calculate rough court bounding box
-        court_xs = [pt[0] for pt in court_landmarks.values()]
-        court_ys = [pt[1] for pt in court_landmarks.values()]
+        court_points = self._flatten_court_landmarks(court_landmarks)
+        court_xs = [pt[0] for pt in court_points]
+        court_ys = [pt[1] for pt in court_points]
         
         if not court_xs or not court_ys:
             # Fallback if court landmarks are missing

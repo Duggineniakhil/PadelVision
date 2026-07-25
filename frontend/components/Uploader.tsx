@@ -3,13 +3,25 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { uploadVideo } from "@/lib/api";
-import { UploadCloud, Film, Play, Sparkles } from "lucide-react";
+import { UploadCloud, Film } from "lucide-react";
 
 export default function Uploader() {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleUpload = useCallback(async (file: File) => {
+    try {
+      setIsUploading(true);
+      setError(null);
+      const { job_id } = await uploadVideo(file);
+      router.push(`/analysis/${job_id}`);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to upload video");
+      setIsUploading(false);
+    }
+  }, [router]);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -28,23 +40,11 @@ export default function Uploader() {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       await handleUpload(e.dataTransfer.files[0]);
     }
-  }, []);
+  }, [handleUpload]);
 
   const onChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       await handleUpload(e.target.files[0]);
-    }
-  };
-
-  const handleUpload = async (file: File) => {
-    try {
-      setIsUploading(true);
-      setError(null);
-      const { job_id } = await uploadVideo(file);
-      router.push(`/analysis/${job_id}`);
-    } catch (err: any) {
-      setError(err.message || "Failed to upload video");
-      setIsUploading(false);
     }
   };
 
@@ -81,7 +81,7 @@ export default function Uploader() {
                 Drag & drop your match video
               </h3>
               <p className="text-sm text-[#8E9BAE]">
-                Supports <span className="text-[#C6D0DD] font-semibold">.mp4, .mov, .avi</span> formats up to 500MB
+                Supports <span className="text-[#C6D0DD] font-semibold">.mp4, .mov, .avi, .mkv</span> formats up to 500MB
               </p>
             </div>
 
@@ -91,7 +91,7 @@ export default function Uploader() {
               <input
                 type="file"
                 className="hidden"
-                accept="video/mp4,video/quicktime,video/x-msvideo"
+                accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,.mkv"
                 onChange={onChange}
               />
             </label>

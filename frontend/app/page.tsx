@@ -1,5 +1,5 @@
 import Uploader from "@/components/Uploader";
-import { Sparkles, Activity, Crosshair, BarChart3, ShieldCheck } from "lucide-react";
+import { Sparkles, Activity, Crosshair, BarChart3 } from "lucide-react";
 
 export default function Home() {
   return (

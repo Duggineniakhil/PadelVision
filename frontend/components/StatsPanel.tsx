@@ -18,6 +18,8 @@ interface TeamMetrics {
   distance_covered: number;
 }
 
+type MetricKey = keyof TeamMetrics;
+
 interface StatsProps {
   player1?: PlayerMetrics;
   player2?: PlayerMetrics;
@@ -29,9 +31,17 @@ interface StatsProps {
   player4Name?: string;
 }
 
+const EMPTY_METRICS: PlayerMetrics = {
+  total_shots: 0,
+  avg_shot_speed: 0,
+  max_shot_speed: 0,
+  avg_player_speed: 0,
+  distance_covered: 0,
+};
+
 function combineTeam(p1: PlayerMetrics | undefined, p2: PlayerMetrics | undefined): TeamMetrics {
-  const p1Data = p1 || { total_shots: 0, avg_shot_speed: 0, max_shot_speed: 0, avg_player_speed: 0, distance_covered: 0 };
-  const p2Data = p2 || { total_shots: 0, avg_shot_speed: 0, max_shot_speed: 0, avg_player_speed: 0, distance_covered: 0 };
+  const p1Data = p1 || EMPTY_METRICS;
+  const p2Data = p2 || EMPTY_METRICS;
   return {
     total_shots: p1Data.total_shots + p2Data.total_shots,
     avg_shot_speed: Math.round(((p1Data.avg_shot_speed || 0) + (p2Data.avg_shot_speed || 0)) / 2),
@@ -42,15 +52,21 @@ function combineTeam(p1: PlayerMetrics | undefined, p2: PlayerMetrics | undefine
 }
 
 export default function StatsPanel({
-  player1 = { total_shots: 48, avg_shot_speed: 112, max_shot_speed: 148, avg_player_speed: 14, distance_covered: 340 },
-  player2 = { total_shots: 52, avg_shot_speed: 108, max_shot_speed: 142, avg_player_speed: 16, distance_covered: 390 },
-  player3 = { total_shots: 44, avg_shot_speed: 115, max_shot_speed: 150, avg_player_speed: 13, distance_covered: 320 },
-  player4 = { total_shots: 50, avg_shot_speed: 110, max_shot_speed: 145, avg_player_speed: 15, distance_covered: 360 },
+  player1,
+  player2,
+  player3,
+  player4,
   player1Name = "Player 1",
   player2Name = "Player 2",
   player3Name = "Player 3",
   player4Name = "Player 4",
 }: StatsProps) {
+  const players = [
+    { p: player1 || EMPTY_METRICS, name: player1Name, color: "bg-[#0250B0]", label: "P1" },
+    { p: player2 || EMPTY_METRICS, name: player2Name, color: "bg-blue-500", label: "P2" },
+    { p: player3 || EMPTY_METRICS, name: player3Name, color: "bg-pink-600", label: "P3" },
+    { p: player4 || EMPTY_METRICS, name: player4Name, color: "bg-rose-500", label: "P4" },
+  ];
   const teamA = combineTeam(player1, player2);
   const teamB = combineTeam(player3, player4);
 
@@ -60,7 +76,7 @@ export default function StatsPanel({
     { label: "Max Shot Speed", key: "max_shot_speed", unit: "km/h", icon: Zap },
     { label: "Avg Movement", key: "avg_player_speed", unit: "km/h", icon: Footprints },
     { label: "Distance Run", key: "distance_covered", unit: "m", icon: ShieldAlert },
-  ];
+  ] satisfies { label: string; key: MetricKey; unit: string; icon: typeof Activity }[];
 
   return (
     <div className="p-6 rounded-2xl bg-[#131B2E] border border-[#1E2A40] shadow-xl space-y-6">
@@ -74,7 +90,7 @@ export default function StatsPanel({
         </div>
 
         <div className="px-3 py-1 rounded-full bg-[#0E1626] border border-[#1E2A40] text-xs font-bold text-[#8E9BAE] uppercase tracking-wider">
-          2 Teams · 4 Players
+          2 Teams / 4 Players
         </div>
 
         <div className="flex items-center gap-2">
@@ -105,8 +121,8 @@ export default function StatsPanel({
       {/* Metrics List */}
       <div className="space-y-5">
         {metrics.map((m) => {
-          const valA = Number((teamA as any)[m.key] || 0);
-          const valB = Number((teamB as any)[m.key] || 0);
+          const valA = Number(teamA[m.key] || 0);
+          const valB = Number(teamB[m.key] || 0);
           const total = Math.max(valA + valB, 1);
           const pctA = Math.round((valA / total) * 100);
           const pctB = 100 - pctA;
@@ -156,12 +172,7 @@ export default function StatsPanel({
           Individual Breakdown
         </h4>
         <div className="grid grid-cols-2 gap-3">
-          {[
-            { p: player1, name: player1Name, color: "bg-[#0250B0]", label: "P1" },
-            { p: player2, name: player2Name, color: "bg-blue-500", label: "P2" },
-            { p: player3, name: player3Name, color: "bg-pink-600", label: "P3" },
-            { p: player4, name: player4Name, color: "bg-rose-500", label: "P4" },
-          ].map(({ p, name, color, label }) => (
+          {players.map(({ p, name, color, label }) => (
             <div key={label} className="p-3 rounded-xl bg-[#0E1626] border border-[#1E2A40]">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">

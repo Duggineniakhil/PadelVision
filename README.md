@@ -244,11 +244,8 @@ Use this to avoid using your own CPU/GPU. Paste this into a single cell in a Col
 !git clone https://github.com/Duggineniakhil/PadelVision.git
 %cd PadelVision/backend
 
-# 2. Install dependencies (pin ultralytics to avoid a known YOLO bug)
-!sed -i 's/torchvision==0.17.1/torchvision/' requirements.txt
-!sed -i 's/torch==2.2.1/torch/' requirements.txt
-!pip install -r requirements.txt
-!pip install ultralytics==8.1.29 supervision gdown
+# 2. Install dependencies (Colab already has PyTorch, OpenCV, Pandas, Numpy)
+!pip install ultralytics==8.1.29 supervision gdown lapx
 
 # 3. Download model weights from Google Drive
 import os

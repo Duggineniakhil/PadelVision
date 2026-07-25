@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { API_BASE } from "@/lib/api";
-import { Play, Pause, RefreshCw, Volume2, VolumeX, Maximize, Users } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Maximize, Users } from "lucide-react";
 
 interface VideoPlayerProps {
   videoUrl: string;

@@ -46,6 +46,7 @@ export default function HeatmapView({ p1Url, p2Url, p3Url, p4Url }: HeatmapViewP
                 <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md text-[10px] font-extrabold text-white shadow-sm" style={{ backgroundColor: config.color }}>
                   {config.name}
                 </span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={getFullUrl(url)}
                   alt={`${config.name} Heatmap`}

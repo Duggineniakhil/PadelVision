@@ -63,6 +63,8 @@ def process_video(
     ball_stub: str | None = None,
     use_stubs: bool = False,
     on_progress=None,       # Optional callback: on_progress(stage: str, pct: int)
+    max_frames: int | None = None,
+    player_model: str = "yolov8x.pt",
 ) -> dict:
     """
     Full PadelVision analysis pipeline.
@@ -101,6 +103,9 @@ def process_video(
     # ── 1. Read video ─────────────────────────────────────────────────────────
     _progress("Reading video", 5)
     video_frames = read_video(input_path)
+    if max_frames and len(video_frames) > max_frames:
+        video_frames = video_frames[:max_frames]
+        logger.info("Truncated to %d frames (max_frames=%d)", max_frames, max_frames)
     total_frames = len(video_frames)
     if total_frames == 0:
         raise ValueError("Input video contains no readable frames.")
@@ -111,6 +116,7 @@ def process_video(
     _progress("Detecting players", 10)
     player_detections, player_tracker = detect_players(
         video_frames,
+        model_path=player_model,
         stub_path=player_stub,
         read_from_stub=use_stubs,
     )

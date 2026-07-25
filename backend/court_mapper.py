@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CourtMapper:
     def __init__(self, court_landmarks, mini_court):
@@ -8,30 +11,61 @@ class CourtMapper:
         mini_court: Instance of MiniCourt (has the 2D coordinate space defined)
         """
         self.homography_matrix = None
-        
-        # 1. Extract 4 outer corners from court_landmarks
-        # We assume the user's model labels the 4 main corners as 'Field_keypoint' or similar.
-        # Look for a class that has at least 4 points (the corners).
+
         src_points = None
         for class_name, points in court_landmarks.items():
             if len(points) >= 4:
-                # We found the corners (e.g., Field_keypoint)
-                src_points = self._sort_corners(points[:4])
+                corners = self._find_four_corners(points)
+                src_points = self._sort_corners(corners)
+                logger.info("Court corners from class '%s': %d keypoints", class_name, len(points))
                 break
-                
+
         if src_points is None:
-            # Fallback if court keypoint detection failed completely
+            all_points = []
+            for points in court_landmarks.values():
+                all_points.extend(points)
+            if len(all_points) >= 4:
+                corners = self._find_four_corners(all_points)
+                src_points = self._sort_corners(corners)
+                logger.info("Court corners from all classes combined: %d keypoints", len(all_points))
+
+        if src_points is None:
+            logger.warning(
+                "Court keypoint detection failed — got %s. Using identity fallback.",
+                {k: len(v) for k, v in court_landmarks.items()} if court_landmarks else "empty",
+            )
             self.homography_matrix = np.eye(3)
             return
 
-        # 2. Get the corresponding 4 destination points on the mini_court
         dst_points = self._get_mini_court_corners(mini_court)
-        
-        # 3. Compute Homography matrix
+
+        logger.info("Homography src corners: %s", src_points)
+        logger.info("Homography dst corners: %s", dst_points)
+
         self.homography_matrix, _ = cv2.findHomography(
-            np.array(src_points, dtype=np.float32), 
+            np.array(src_points, dtype=np.float32),
             np.array(dst_points, dtype=np.float32)
         )
+
+    def _find_four_corners(self, points):
+        """Extract the 4 outermost corners from a set of keypoints."""
+        if len(points) == 4:
+            return list(points)
+
+        pts = np.array(points, dtype=np.float32)
+        sums = pts[:, 0] + pts[:, 1]
+        diffs = pts[:, 0] - pts[:, 1]
+
+        indices = set()
+        indices.add(int(np.argmin(sums)))   # TL: min(x+y)
+        indices.add(int(np.argmax(diffs)))  # TR: max(x-y)
+        indices.add(int(np.argmax(sums)))   # BR: max(x+y)
+        indices.add(int(np.argmin(diffs)))  # BL: min(x-y)
+
+        corners = [points[i] for i in sorted(indices)]
+        if len(corners) < 4:
+            return list(points[:4])
+        return corners[:4]
 
     def _sort_corners(self, points):
         """

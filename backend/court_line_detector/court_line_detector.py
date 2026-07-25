@@ -12,13 +12,15 @@ class CourtLineDetector:
         if results.boxes is None or results.keypoints is None:
             return court_landmarks
 
-        for box, keypoint in zip(results.boxes, results.keypoints.xy):
+        for box, keypoints in zip(results.boxes, results.keypoints.xy):
             class_id = int(box.cls)
             class_name = self.model.names[class_id]
-            x, y = keypoint[0]
             if class_name not in court_landmarks:
                 court_landmarks[class_name] = []
-            court_landmarks[class_name].append((float(x), float(y)))
+            for kp in keypoints:
+                x, y = float(kp[0]), float(kp[1])
+                if x > 0 or y > 0:
+                    court_landmarks[class_name].append((x, y))
 
         return court_landmarks
 

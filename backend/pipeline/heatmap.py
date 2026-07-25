@@ -1,13 +1,16 @@
 import os
+import logging
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")  # Non-interactive backend — safe for server use
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import constants
+
+logger = logging.getLogger(__name__)
 
 def _draw_court_outline(ax):
     """Draw a simple padel court schematic on the given axes."""
@@ -80,8 +83,8 @@ def generate_heatmap(
         fig, ax = plt.subplots(figsize=(5, 10))
         _draw_court_outline(ax)
 
+        logger.info("Player %d: %d position samples", player_id, len(xs))
         if xs:
-            # Build density grid
             grid_size = 100
             heatmap_data, xedges, yedges = np.histogram2d(
                 xs, ys,

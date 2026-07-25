@@ -56,6 +56,7 @@ def _run_pipeline(job_id: str, input_path: str):
             "heatmap_p3_url": f"/outputs/{job_id}/heatmap_p3.png",
             "heatmap_p4_url": f"/outputs/{job_id}/heatmap_p4.png",
             "shot_map_url": f"/outputs/{job_id}/shot_map.png",
+            "highlights_video_url": f"/outputs/{job_id}/highlights.avi" if result.get("highlights_video_path") else None,
             "player_1": result["stats"]["player_1"],
             "player_2": result["stats"]["player_2"],
             "player_3": result["stats"]["player_3"],

@@ -1,4 +1,5 @@
 import os
+import logging
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -9,6 +10,8 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from utils import measure_distance
 import constants
+
+logger = logging.getLogger(__name__)
 
 def _draw_court_outline(ax):
     """Draw a simple padel court schematic on the given axes."""
@@ -76,6 +79,11 @@ def generate_shot_map(
                 np.clip(norm_x, 0, 1) * actual_court_w,
                 np.clip(norm_y, 0, 1) * actual_court_h,
             ))
+
+    logger.info("Shot map: %d ball positions collected", len(positions))
+    if positions:
+        sample = positions[:3]
+        logger.info("Sample positions (court coords): %s", sample)
 
     fig, ax = plt.subplots(figsize=(5, 10))
     _draw_court_outline(ax)

@@ -10,11 +10,15 @@ Post-processing after raw detection:
 
 import sys
 import os
+import logging
+import numpy as np
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from court_line_detector import CourtLineDetector
 from mini_court import MiniCourt
 from court_mapper import CourtMapper
+
+logger = logging.getLogger(__name__)
 
 
 def detect_court_keypoints(
@@ -73,31 +77,39 @@ def convert_to_mini_court_coordinates(
     ball_detections: list,
     court_keypoints: dict,
 ) -> tuple[list, list]:
-    # 1. Create CourtMapper
+    logger.info("Court keypoints detected: %s",
+                {k: len(v) for k, v in court_keypoints.items()} if court_keypoints else "none")
+
     mapper = CourtMapper(court_keypoints, mini_court)
+
+    is_identity = mapper.homography_matrix is not None and \
+        np.allclose(mapper.homography_matrix, np.eye(3))
+    if is_identity:
+        logger.warning("Homography is identity — coordinate mapping will be incorrect")
 
     output_player_boxes = []
     output_ball_boxes = []
 
     for frame_num, player_bbox in enumerate(player_detections):
         frame_player_boxes = {}
-        # Convert player positions
         for player_id, bbox in player_bbox.items():
-            # For players, we map the center of the bottom edge (feet)
             foot_pos = (int((bbox[0] + bbox[2]) / 2), int(bbox[3]))
             mini_pos = mapper.get_mini_court_coordinates(foot_pos)
             frame_player_boxes[player_id] = mini_pos
         output_player_boxes.append(frame_player_boxes)
 
-        # Convert ball position
         frame_ball_boxes = {}
         if frame_num < len(ball_detections):
             ball_dict = ball_detections[frame_num]
             for ball_id, bbox in ball_dict.items():
-                # For ball, we map the center of the bounding box
                 ball_pos = (int((bbox[0] + bbox[2]) / 2), int((bbox[1] + bbox[3]) / 2))
                 mini_pos = mapper.get_mini_court_coordinates(ball_pos)
                 frame_ball_boxes[ball_id] = mini_pos
         output_ball_boxes.append(frame_ball_boxes)
+
+    player_count = sum(1 for f in output_player_boxes if f)
+    ball_count = sum(1 for f in output_ball_boxes if f)
+    logger.info("Mini-court positions: %d frames with players, %d frames with ball",
+                player_count, ball_count)
 
     return output_player_boxes, output_ball_boxes

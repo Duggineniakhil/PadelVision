@@ -34,6 +34,7 @@ export interface AnalysisData extends StatusData {
   heatmap_p3_url?: string;
   heatmap_p4_url?: string;
   shot_map_url?: string;
+  highlights_video_url?: string;
   total_frames?: number;
   fps?: number;
   error?: string;

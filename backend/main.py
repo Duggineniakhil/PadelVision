@@ -20,13 +20,14 @@ def main():
 
     print(f"Starting analysis for: {input_path}  (job: {job_id})")
 
+    use_stubs = "--stubs" in sys.argv
+
     result = process_video(
         input_path=input_path,
         job_id=job_id,
-        # Use cached stubs if they exist (speeds up re-runs during development)
-        player_stub="tracker_stubs/player_detections.pkl",
-        ball_stub="tracker_stubs/ball_detections.pkl",
-        use_stubs=True,
+        player_stub="tracker_stubs/player_detections.pkl" if use_stubs else None,
+        ball_stub="tracker_stubs/ball_detections.pkl" if use_stubs else None,
+        use_stubs=use_stubs,
         on_progress=lambda stage, pct: print(f"  [{pct:>3}%] {stage}"),
     )
 

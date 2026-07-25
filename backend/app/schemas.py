@@ -50,6 +50,7 @@ class AnalysisResult(BaseModel):
     heatmap_p3_url: Optional[str] = None
     heatmap_p4_url: Optional[str] = None
     shot_map_url: Optional[str] = None
+    highlights_video_url: Optional[str] = None
     total_frames: Optional[int] = None
     fps: Optional[float] = None
     error: Optional[str] = None

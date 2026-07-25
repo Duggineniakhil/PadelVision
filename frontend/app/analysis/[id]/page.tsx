@@ -73,16 +73,22 @@ export default function AnalysisDashboard() {
         {/* Center Stage Content */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto space-y-6 custom-scrollbar">
           {/* Main Video & Scoreboard Area */}
-          <VideoPlayer
-            videoUrl={analysisData.video_url}
-            player1Name="Player 1"
-            player2Name="Player 2"
-            player3Name="Player 3"
-            player4Name="Player 4"
-            score1={25}
-            score2={21}
-            seekTime={seekTime}
-          />
+          {analysisData.video_url ? (
+            <VideoPlayer
+              videoUrl={analysisData.video_url}
+              player1Name="Player 1"
+              player2Name="Player 2"
+              player3Name="Player 3"
+              player4Name="Player 4"
+              score1={25}
+              score2={21}
+              seekTime={seekTime}
+            />
+          ) : (
+            <div className="p-6 rounded-2xl bg-[#131B2E] border border-[#1E2A40] text-[#8E9BAE]">
+              Processed video is not available for this analysis.
+            </div>
+          )}
 
           {/* Visualizations & Match Data */}
           {activeTab === "home" && (

@@ -12,7 +12,7 @@ def generate_statistics(
     ball_mini_court_detections: list,
     ball_shot_frames: list,
     mini_court,
-    fps: int = 24,
+    fps: float = 24.0,
 ) -> dict:
     """
     Calculate per-player shot speeds, movement speeds, distance covered for 4 players.

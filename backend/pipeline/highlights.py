@@ -3,32 +3,17 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from utils import measure_distance
-import constants
 
 # Tuning thresholds
 FAST_SHOT_SPEED_THRESHOLD = 0.4   # Normalized ball speed (fraction of max)
 LONG_RALLY_MIN_SHOTS = 5          # Consecutive shots to count as a long rally
 CLIP_PADDING_FRAMES = 60          # Extra frames to include before/after a highlight
 
-def is_wall_bounce(mini_court_pos, padding=0.5):
-    """
-    Check if a ball bounce occurred outside the standard padel court lines
-    (x < 0, x > 10, y < 0, y > 20), which indicates a glass wall bounce in Padel.
-    """
-    x, y = mini_court_pos
-    # Note: mini_court coordinates in pixels, we need them in meters or check bounds directly
-    # Wait, the input `ball_mini_court_positions` is in pixels mapped to the mini court!
-    # A wall bounce in pixels would be outside [court_start_x, court_end_x] or [court_start_y, court_end_y]
-    # We will pass the bounds to this function if we want exact pixel tracking, but 
-    # since we don't have the mini_court bounds here directly, we'll just use the standard highlight logic
-    # and adjust the labels.
-    pass
-
 def generate_highlights(
     ball_shot_frames: list[int],
     ball_mini_court_positions: list[dict],
     total_frames: int,
-    fps: int = 24,
+    fps: float = 24.0,
 ) -> list[dict]:
     """
     Identify Padel highlight moments based on shot speed, rally length, and rebounds.

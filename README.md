@@ -245,7 +245,7 @@ Use this to avoid using your own CPU/GPU. Paste this into a single cell in a Col
 %cd PadelVision/backend
 
 # 2. Install dependencies (Colab already has PyTorch, OpenCV, Pandas, Numpy)
-!pip install ultralytics==8.1.29 supervision gdown lapx
+!pip install ultralytics supervision gdown lapx
 
 # 3. Download model weights from Google Drive
 import os

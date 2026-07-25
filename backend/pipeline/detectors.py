@@ -7,7 +7,9 @@ Each function takes video frames and returns raw detection dicts.
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+_BACKEND_DIR = os.path.join(os.path.dirname(__file__), '..')
+sys.path.append(_BACKEND_DIR)
 
 from trackers import PlayerTracker, BallTracker
 
@@ -35,7 +37,7 @@ def detect_players(
 
 def detect_ball(
     video_frames: list,
-    model_path: str = "models/padel_ball_detector.pt",
+    model_path: str = os.path.join(_BACKEND_DIR, "models", "padel_ball_detector.pt"),
     stub_path: str | None = None,
     read_from_stub: bool = False,
 ) -> list[dict]:

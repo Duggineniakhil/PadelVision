@@ -21,9 +21,12 @@ from court_mapper import CourtMapper
 logger = logging.getLogger(__name__)
 
 
+_BACKEND_DIR = os.path.join(os.path.dirname(__file__), '..')
+
+
 def detect_court_keypoints(
     first_frame,
-    model_path: str = "models/padel_court_keypoints.pt",
+    model_path: str = os.path.join(_BACKEND_DIR, "models", "padel_court_keypoints.pt"),
 ) -> dict:
     """
     Predict court landmarks from the first frame as a dictionary of {class_name: (x, y)}.

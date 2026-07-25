@@ -260,15 +260,6 @@ video_filename = list(uploaded.keys())[0]
 
 # 5. Run the pipeline
 import sys
-import torch
-
-# PyTorch 2.6 compatibility patch for older Ultralytics models
-_original_load = torch.load
-def patched_load(*args, **kwargs):
-    kwargs['weights_only'] = False
-    return _original_load(*args, **kwargs)
-torch.load = patched_load
-
 sys.path.append('.')
 from pipeline.processor import process_video
 result = process_video(input_path=video_filename, job_id="colab_run", use_stubs=False)

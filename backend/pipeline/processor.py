@@ -20,6 +20,18 @@ import logging
 # Allow imports from backend root
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+# ── PyTorch 2.6 compatibility patch ───────────────────────────────────────────
+# PyTorch 2.6 changed the default of weights_only to True, which breaks loading
+# YOLO model checkpoints that embed Python objects (e.g. DetectionModel, PoseModel).
+# We patch torch.load here unconditionally so all downstream YOLO model loads work.
+import torch as _torch
+_torch_load_original = _torch.load
+def _torch_load_patched(*args, **kwargs):
+    kwargs.setdefault('weights_only', False)
+    return _torch_load_original(*args, **kwargs)
+_torch.load = _torch_load_patched
+# ─────────────────────────────────────────────────────────────────────────────
+
 import cv2
 from utils import get_video_fps, read_video, save_video, save_highlights_video
 from utils.player_stats_drawer_utils import draw_player_stats

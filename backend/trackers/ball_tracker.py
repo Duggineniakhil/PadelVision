@@ -7,9 +7,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class BallTracker:
-    MAX_BALL_SIZE = 80
+    MAX_BALL_SIZE = 150      # Padel balls can appear larger at close camera distances
     MIN_BALL_SIZE = 3
-    MAX_JUMP_PX = 400
+    MAX_JUMP_PX = 600        # Allow larger jumps between frames
+    LOST_RESET_FRAMES = 10   # Reset last_pos after this many consecutive misses
 
     def __init__(self, model_path):
         self.model = YOLO(model_path)
@@ -23,10 +24,17 @@ class BallTracker:
         logger.info("Ball detected in %d / %d frames (%.1f%%)", detected, total,
                      100 * detected / max(total, 1))
 
-        df_ball_positions = df_ball_positions.interpolate()
-        df_ball_positions = df_ball_positions.bfill()
+        # Limit interpolation to gaps of at most 30 frames to avoid
+        # wild straight-line hallucinations across long missing stretches.
+        df_ball_positions = df_ball_positions.interpolate(limit=30)
+        df_ball_positions = df_ball_positions.bfill(limit=30)
 
-        ball_positions = [{1: x} for x in df_ball_positions.to_numpy().tolist()]
+        after_interp = df_ball_positions.notna().all(axis=1).sum()
+        logger.info("After interpolation: %d / %d frames have ball data (%.1f%%)",
+                     after_interp, total, 100 * after_interp / max(total, 1))
+
+        ball_positions = [{1: x} if not any(pd.isna(v) for v in x) else {}
+                          for x in df_ball_positions.to_numpy().tolist()]
         return ball_positions
 
     def get_ball_shot_frames(self, ball_positions):
@@ -74,13 +82,41 @@ class BallTracker:
                 ball_detections = pickle.load(f)
             return ball_detections
 
+        # ── Pass 1: normal detection with jump constraint + recovery ──────
         last_pos = None
+        lost_count = 0
         for frame in frames:
             ball_dict = self.detect_frame(frame, last_pos)
-            ball_detections.append(ball_dict)
             if 1 in ball_dict:
                 bbox = ball_dict[1]
                 last_pos = ((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
+                lost_count = 0
+            else:
+                lost_count += 1
+                # After too many consecutive misses, reset anchor so any
+                # detection can re-acquire the ball.
+                if lost_count >= self.LOST_RESET_FRAMES:
+                    last_pos = None
+            ball_detections.append(ball_dict)
+
+        # ── Pass 2: retry missed frames without jump constraint ───────────
+        # For frames that had no detection at all, try again with no last_pos
+        # (unconstrained) so the ball can be picked up anywhere in the frame.
+        pass1_detected = sum(1 for d in ball_detections if d)
+        pass1_total = len(ball_detections)
+        logger.info("Ball pass-1: detected %d / %d (%.1f%%)",
+                     pass1_detected, pass1_total,
+                     100 * pass1_detected / max(pass1_total, 1))
+
+        retry_count = 0
+        for i, (frame, det) in enumerate(zip(frames, ball_detections)):
+            if not det:
+                retry = self.detect_frame(frame, last_pos=None)
+                if retry:
+                    ball_detections[i] = retry
+                    retry_count += 1
+        if retry_count:
+            logger.info("Ball pass-2 (unconstrained retry): recovered %d extra frames", retry_count)
 
         if stub_path is not None:
             with open(stub_path, 'wb') as f:
@@ -89,7 +125,7 @@ class BallTracker:
         return ball_detections
 
     def detect_frame(self, frame, last_pos=None):
-        results = self.model.predict(frame, conf=0.15, verbose=False)[0]
+        results = self.model.predict(frame, conf=0.10, verbose=False)[0]
 
         best_box = None
         best_conf = 0.0
@@ -132,7 +168,4 @@ class BallTracker:
                 cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 255), 2)
             output_video_frames.append(frame)
         
-        return output_video_frames
-
-
-    
+        return output_video_frames

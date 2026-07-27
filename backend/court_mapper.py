@@ -145,4 +145,14 @@ class CourtMapper:
         pt = np.array([[[object_position[0], object_position[1]]]], dtype=np.float32)
         dst_pt = cv2.perspectiveTransform(pt, self.homography_matrix)
 
-        return (int(dst_pt[0][0][0]), int(dst_pt[0][0][1]))
+        x = dst_pt[0][0][0]
+        y = dst_pt[0][0][1]
+
+        # Clamp to the mini-court rectangle so downstream normalization
+        # (which divides by court_w / court_h) always produces values in [0, 1].
+        mc = self.mini_court
+        x = float(np.clip(x, mc.court_start_x, mc.court_end_x))
+        y = float(np.clip(y, mc.court_start_y, mc.court_end_y))
+
+        return (int(x), int(y))
+

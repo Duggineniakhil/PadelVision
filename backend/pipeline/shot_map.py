@@ -88,9 +88,12 @@ def generate_shot_map(
     actual_court_h = constants.COURT_LENGTH
 
     positions = []
+    raw_pxs, raw_pys = [], []
     for frame in ball_mini_court_positions:
         if 1 in frame:
             px, py = frame[1]
+            raw_pxs.append(px)
+            raw_pys.append(py)
             norm_x = (px - court_start_x) / max(court_w, 1)
             norm_y = (py - court_start_y) / max(court_h_pixels, 1)
             positions.append((
@@ -98,9 +101,14 @@ def generate_shot_map(
                 np.clip(norm_y, 0, 1) * actual_court_h,
             ))
 
-    logger.info("Shot map: %d ball positions collected", len(positions))
+    frames_with_ball = sum(1 for f in ball_mini_court_positions if f)
+    logger.info("Shot map: %d ball positions collected out of %d frames (%d have ball data)",
+                len(positions), len(ball_mini_court_positions), frames_with_ball)
+    if raw_pxs:
+        logger.info("  Raw ball pixel coords: x=[%.0f, %.0f] y=[%.0f, %.0f]",
+                     min(raw_pxs), max(raw_pxs), min(raw_pys), max(raw_pys))
     if positions:
-        sample = positions[:3]
+        sample = positions[:5]
         logger.info("Sample positions (court coords): %s", sample)
 
     fig, ax = plt.subplots(figsize=(5, 10))

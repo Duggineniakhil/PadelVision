@@ -48,8 +48,13 @@ def generate_heatmap(
     court_w = mini_court.get_width_of_mini_court()
     court_start_x = mini_court.court_start_x
     court_start_y = mini_court.court_start_y
+    court_end_x = mini_court.court_end_x
     court_end_y = mini_court.court_end_y
     court_h_pixels = court_end_y - court_start_y
+
+    logger.info("Mini-court bounds: x=[%d, %d] y=[%d, %d] w=%d h=%d",
+                court_start_x, court_end_x, court_start_y, court_end_y,
+                court_w, court_h_pixels)
 
     paths = {}
     actual_court_w = constants.COURT_WIDTH
@@ -57,9 +62,12 @@ def generate_heatmap(
 
     for player_id in [1, 2, 3, 4]:
         xs, ys = [], []
+        raw_pxs, raw_pys = [], []
         for frame in player_mini_court_positions:
             if player_id in frame:
                 px, py = frame[player_id]
+                raw_pxs.append(px)
+                raw_pys.append(py)
                 norm_x = (px - court_start_x) / max(court_w, 1)
                 norm_y = (py - court_start_y) / max(court_h_pixels, 1)
                 xs.append(np.clip(norm_x, 0, 1) * actual_court_w)
@@ -69,33 +77,42 @@ def generate_heatmap(
         _draw_court_outline(ax)
 
         logger.info("Player %d: %d position samples", player_id, len(xs))
+        if raw_pxs:
+            logger.info("  Raw pixel coords: x=[%.0f, %.0f] y=[%.0f, %.0f]",
+                        min(raw_pxs), max(raw_pxs), min(raw_pys), max(raw_pys))
 
         if len(xs) >= 2:
             x_std = np.std(xs)
             y_std = np.std(ys)
-            logger.info("  x range=[%.1f, %.1f] std=%.2f  y range=[%.1f, %.1f] std=%.2f",
+            logger.info("  Court coords: x=[%.1f, %.1f] std=%.2f  y=[%.1f, %.1f] std=%.2f",
                         min(xs), max(xs), x_std, min(ys), max(ys), y_std)
 
-            grid_size = 100
-            heatmap_data, xedges, yedges = np.histogram2d(
-                xs, ys,
-                bins=grid_size,
-                range=[[0, actual_court_w], [0, actual_court_h]],
-            )
-            sigma = max(2, min(5, grid_size // 20))
-            heatmap_data = gaussian_filter(heatmap_data, sigma=sigma)
-            heatmap_data = heatmap_data / (heatmap_data.max() + 1e-8)
+            # If positions have enough spread, use a proper heatmap
+            if x_std > 0.05 or y_std > 0.05:
+                grid_size = 100
+                heatmap_data, xedges, yedges = np.histogram2d(
+                    xs, ys,
+                    bins=grid_size,
+                    range=[[0, actual_court_w], [0, actual_court_h]],
+                )
+                sigma = max(2, min(5, grid_size // 20))
+                heatmap_data = gaussian_filter(heatmap_data, sigma=sigma)
+                heatmap_data = heatmap_data / (heatmap_data.max() + 1e-8)
 
-            ax.imshow(
-                heatmap_data.T,
-                extent=[0, actual_court_w, 0, actual_court_h],
-                origin="lower",
-                cmap="YlOrRd",
-                alpha=0.65,
-                aspect="auto",
-                vmin=0,
-                vmax=1,
-            )
+                ax.imshow(
+                    heatmap_data.T,
+                    extent=[0, actual_court_w, 0, actual_court_h],
+                    origin="lower",
+                    cmap="YlOrRd",
+                    alpha=0.65,
+                    aspect="auto",
+                    vmin=0,
+                    vmax=1,
+                )
+            else:
+                # Degenerate case: all points at same location — show as scatter
+                logger.warning("  Player %d: positions have near-zero spread, using scatter plot", player_id)
+                ax.scatter(xs, ys, c="red", s=40, alpha=0.6, zorder=5)
         elif xs:
             ax.scatter(xs, ys, c="red", s=30, alpha=0.5, zorder=5)
 
@@ -112,3 +129,4 @@ def generate_heatmap(
         paths[f"player_{player_id}"] = out_path
 
     return paths
+

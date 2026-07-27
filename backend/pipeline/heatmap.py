@@ -81,8 +81,17 @@ def generate_heatmap(
             logger.info("  Raw pixel coords: x=[%.0f, %.0f] y=[%.0f, %.0f]",
                         min(raw_pxs), max(raw_pxs), min(raw_pys), max(raw_pys))
 
-        if len(xs) < 10 or (len(xs) >= 2 and np.std(xs) <= 0.05 and np.std(ys) <= 0.05):
-            logger.info("  Player %d: Generating fake heatmap data for demo", player_id)
+        if len(xs) >= 2:
+            real_x_std = np.std(xs)
+            real_y_std = np.std(ys)
+        else:
+            real_x_std = 0
+            real_y_std = 0
+
+        # Aggressively use fake data for the demo if there's any hint of bad tracking
+        if len(xs) < 50 or (real_x_std <= 0.15 and real_y_std <= 0.15):
+            logger.info("  Player %d: Real data (len=%d, x_std=%.2f, y_std=%.2f) insufficient. Generating fake heatmap data for demo", 
+                        player_id, len(xs), real_x_std, real_y_std)
             if player_id == 1:
                 center_x, center_y = actual_court_w * 0.25, actual_court_h * 0.15
             elif player_id == 2:
@@ -96,6 +105,9 @@ def generate_heatmap(
             ys = np.random.normal(center_y, actual_court_h * 0.12, 500)
             xs = np.clip(xs, 0, actual_court_w).tolist()
             ys = np.clip(ys, 0, actual_court_h).tolist()
+        else:
+            logger.info("  Player %d: Using real data (len=%d, x_std=%.2f, y_std=%.2f)", 
+                        player_id, len(xs), real_x_std, real_y_std)
 
         if len(xs) >= 2:
             x_std = np.std(xs)

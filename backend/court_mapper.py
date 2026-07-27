@@ -36,7 +36,9 @@ class CourtMapper:
             xs = [p[0] for p in src_points]
             ys = [p[1] for p in src_points]
             width, height = max(xs) - min(xs), max(ys) - min(ys)
-            if width < 100 or height < 50:
+            # A full padel court should occupy a large portion of the video frame.
+            # Reject small bounding boxes which are likely hallucinations.
+            if width < 400 or height < 200:
                 logger.warning("Court keypoints bounding box too small (%dx%d). Rejecting model output.", width, height)
                 src_points = None
 

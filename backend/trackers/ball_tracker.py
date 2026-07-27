@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 
 class BallTracker:
     MAX_BALL_SIZE = 150      # Padel balls can appear larger at close camera distances
-    MIN_BALL_SIZE = 3
-    MAX_JUMP_PX = 600        # Allow larger jumps between frames
-    LOST_RESET_FRAMES = 10   # Reset last_pos after this many consecutive misses
+    MIN_BALL_SIZE = 1        # Allow extremely small detections for far-away balls
+    MAX_JUMP_PX = 800        # Allow huge jumps
+    LOST_RESET_FRAMES = 5    # Reset last_pos quicker to allow re-anchoring
 
     def __init__(self, model_path):
         self.model = YOLO(model_path)
@@ -24,10 +24,10 @@ class BallTracker:
         logger.info("Ball detected in %d / %d frames (%.1f%%)", detected, total,
                      100 * detected / max(total, 1))
 
-        # Limit interpolation to gaps of at most 30 frames to avoid
-        # wild straight-line hallucinations across long missing stretches.
-        df_ball_positions = df_ball_positions.interpolate(limit=30)
-        df_ball_positions = df_ball_positions.bfill(limit=30)
+        # Increase interpolation limit drastically. If a ball is lost for 3-4 seconds (e.g. 90 frames at 24fps)
+        # we still want to bridge the gap if possible so the trajectory remains somewhat intact.
+        df_ball_positions = df_ball_positions.interpolate(limit=90)
+        df_ball_positions = df_ball_positions.bfill(limit=90)
 
         after_interp = df_ball_positions.notna().all(axis=1).sum()
         logger.info("After interpolation: %d / %d frames have ball data (%.1f%%)",
@@ -125,7 +125,8 @@ class BallTracker:
         return ball_detections
 
     def detect_frame(self, frame, last_pos=None):
-        results = self.model.predict(frame, conf=0.10, verbose=False)[0]
+        # Extremely low confidence threshold to catch blurry padel balls
+        results = self.model.predict(frame, conf=0.05, verbose=False)[0]
 
         best_box = None
         best_conf = 0.0

@@ -194,8 +194,8 @@ Download and place the following model files:
 | `padel_court_keypoints.pt` | `backend/models/padel_court_keypoints.pt` |
 
 **Download links for the custom Padel models:**
-- `padel_ball_detector.pt` → [Google Drive](https://drive.google.com/file/d/1GNuhEyX-Akpb9UwbCrFBMS3EI-VQx0lx/view?usp=sharing)
-- `padel_court_keypoints.pt` → [Google Drive](https://drive.google.com/file/d/1aXIFR855U27v2QAKy07q0HFOd7KCRlYu/view?usp=sharing)
+- `padel_ball_detector.pt` → [Google Drive](https://drive.google.com/file/d/15mzRe0BYYOzhyNH4sRldEnQFYSYGOVg6/view?usp=drive_link)
+- `padel_court_keypoints.pt` → [Google Drive](https://drive.google.com/file/d/1xXZzpKD3BE5Fj636l-1NfBlRDhIX0uap/view?usp=drive_link)
 
 ---
 
@@ -250,8 +250,8 @@ Use this to avoid using your own CPU/GPU. Paste this into a single cell in a Col
 # 3. Download model weights from Google Drive
 import os
 os.makedirs('models', exist_ok=True)
-!gdown "1GNuhEyX-Akpb9UwbCrFBMS3EI-VQx0lx" -O models/padel_ball_detector.pt
-!gdown "1aXIFR855U27v2QAKy07q0HFOd7KCRlYu" -O models/padel_court_keypoints.pt
+!gdown "15mzRe0BYYOzhyNH4sRldEnQFYSYGOVg6" -O models/padel_ball_detector.pt
+!gdown "1xXZzpKD3BE5Fj636l-1NfBlRDhIX0uap" -O models/padel_court_keypoints.pt
 
 # 4. Upload your video
 from google.colab import files

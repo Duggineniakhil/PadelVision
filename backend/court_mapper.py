@@ -33,6 +33,14 @@ class CourtMapper:
                 logger.info("Court corners from all classes combined: %d keypoints", len(all_points))
 
         if src_points is not None:
+            xs = [p[0] for p in src_points]
+            ys = [p[1] for p in src_points]
+            width, height = max(xs) - min(xs), max(ys) - min(ys)
+            if width < 100 or height < 50:
+                logger.warning("Court keypoints bounding box too small (%dx%d). Rejecting model output.", width, height)
+                src_points = None
+
+        if src_points is not None:
             dst_points = self._get_mini_court_corners(mini_court)
             logger.info("Homography src corners: %s", src_points)
             logger.info("Homography dst corners: %s", dst_points)

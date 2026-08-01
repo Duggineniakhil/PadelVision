@@ -119,11 +119,13 @@ backend/input_videos/
 # Tracker cache
 backend/tracker_stubs/
 
-# Virtual environment
+# Virtual environments
 venv/
+.venv/
+.venv311/
 backend/venv/
-uploads/520bfc9a-783a-4d87-8c49-f1879fdbf89d.mp4
-backend/outputs/520bfc9a-783a-4d87-8c49-f1879fdbf89d/shot_map.png
-backend/outputs/520bfc9a-783a-4d87-8c49-f1879fdbf89d/video.avi
-backend/outputs/520bfc9a-783a-4d87-8c49-f1879fdbf89d/heatmap_p2.png
-backend/outputs/520bfc9a-783a-4d87-8c49-f1879fdbf89d/heatmap_p1.png
+
+# Uploaded and generated media
+uploads/
+backend/outputs/
+backend/jobs/jobs.db

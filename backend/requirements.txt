@@ -5,7 +5,7 @@ opencv-python-headless==4.8.0.74
 pandas==1.5.3
 pandas-datareader==0.10.0
 matplotlib==3.8.3
-ultralytics==8.1.29
+ultralytics>=8.3.0
 lapx==0.9.4
 torch==2.2.1
 torchvision==0.17.1
@@ -18,3 +18,5 @@ fastapi==0.111.0
 uvicorn[standard]==0.29.0
 python-multipart==0.0.9
 aiofiles==23.2.1
+imageio==2.37.4
+imageio-ffmpeg==0.6.0

@@ -184,11 +184,11 @@ def process_video(
         cv2.putText(frame, f"Frame: {i}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     _progress("Saving video", 90)
-    video_out_path = os.path.join(output_dir, "video.avi")
+    video_out_path = os.path.join(output_dir, "video.mp4")
     save_video(output_frames, video_out_path, fps=fps)
 
     _progress("Saving highlights reel", 92)
-    highlights_out_path = os.path.join(output_dir, "highlights.avi")
+    highlights_out_path = os.path.join(output_dir, "highlights.mp4")
     if highlights:
         save_highlights_video(output_frames, highlights, highlights_out_path, fps=fps)
     else:

@@ -24,11 +24,25 @@ def get_video_fps(video_path):
 def save_video(output_video_frames, output_video_path, fps=DEFAULT_FPS):
     if not output_video_frames:
         raise ValueError("Cannot save an empty video.")
-    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-    out = cv2.VideoWriter(output_video_path, fourcc, fps, (output_video_frames[0].shape[1], output_video_frames[0].shape[0]))
-    for frame in output_video_frames:
-        out.write(frame)
-    out.release()
+    try:
+        import imageio
+        writer = imageio.get_writer(
+            output_video_path,
+            fps=fps,
+            codec='libx264',
+            pixelformat='yuv420p',
+            macro_block_size=1
+        )
+        for frame in output_video_frames:
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            writer.append_data(rgb_frame)
+        writer.close()
+    except Exception:
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_video_path, fourcc, fps, (output_video_frames[0].shape[1], output_video_frames[0].shape[0]))
+        for frame in output_video_frames:
+            out.write(frame)
+        out.release()
 
 def save_highlights_video(video_frames, highlights, output_video_path, fps=DEFAULT_FPS):
     """

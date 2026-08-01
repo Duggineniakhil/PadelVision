@@ -161,6 +161,8 @@ PadelVision/
 - Python 3.10 or 3.11
 - Node.js 18+
 
+> **Important:** Do not use Python 3.13 for the backend environment. This repo pins older packages such as `pandas==1.5.3`, which do not provide wheels for Python 3.13 and will try to build from source on Windows.
+
 ### 1. Create Python Virtual Environment
 
 ```bash
@@ -178,10 +180,22 @@ source venv/bin/activate
 
 ```bash
 cd backend
-pip install -r requirements.txt
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
 ```
 
-> **Note:** If you are on Python 3.11 and `scipy` freezes on import, upgrade it: `pip install scipy==1.13.1`
+*Note: The backend requires `imageio` and `imageio-ffmpeg` to encode browser-compatible H.264 MP4 videos. These are already added to `requirements.txt`.*
+
+> **GPU note:** The backend will use your NVIDIA GPU automatically if PyTorch has CUDA support. The default `requirements.txt` may install a CPU-only PyTorch build, so on a GPU laptop you should replace the torch packages with the CUDA wheel after the base install:
+
+```bash
+python -m pip uninstall -y torch torchvision torchaudio
+python -m pip install torch==2.2.1 torchvision==0.17.1 torchaudio==2.2.1 --index-url https://download.pytorch.org/whl/cu121
+```
+
+> **Note:** If you are on Python 3.11 and `scipy` freezes on import, upgrade it: `python -m pip install scipy==1.13.1`
+>
+> On Windows, make sure you are using the project virtual environment, not a mixed Conda + venv shell. If `python -c "import sys; print(sys.executable)"` does not point to `venv\Scripts\python.exe`, deactivate Conda and reactivate the venv before reinstalling.
 
 ### 3. Place Model Weights
 
@@ -205,9 +219,11 @@ Download and place the following model files:
 
 ```bash
 cd backend
-..\venv\Scripts\Activate.ps1      # Windows
+..\.venv311\Scripts\Activate.ps1      # Windows
 uvicorn app.main:app --reload --port 8000
 ```
+
+If `uvicorn` is not recognized in your shell, use `python -m uvicorn app.main:app --reload --port 8000` instead.
 
 ### Start the Frontend (new terminal)
 

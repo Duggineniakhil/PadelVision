@@ -42,24 +42,32 @@ export default function AnalysisDashboard() {
 
   // Processing finished -> PB Vision SaaS Interface
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#0A0F1D] text-slate-50 flex flex-col">
-      {/* Subheader Breadcrumbs */}
-      <BreadcrumbHeader
-        category="Demos"
-        matchType="Padel Match"
-        activeTitle={
-          activeTab === "home"
-            ? "Home"
-            : activeTab === "shots"
-            ? "Shot Explorer"
-            : activeTab === "stats"
-            ? "Game Stats"
-            : "Leaderboards"
-        }
-      />
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0A0F1D] text-slate-50 flex flex-col relative">
+      {/* Ambient glowing background effects */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-900/20 blur-[150px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-cyan-900/20 blur-[150px] rounded-full" />
+      </div>
+
+      {/* Subheader Breadcrumbs (make it relative to sit above absolute background) */}
+      <div className="relative z-10">
+        <BreadcrumbHeader
+          category="Demos"
+          matchType="Padel Match"
+          activeTitle={
+            activeTab === "home"
+              ? "Home"
+              : activeTab === "shots"
+              ? "Shot Explorer"
+              : activeTab === "stats"
+              ? "Game Stats"
+              : "Leaderboards"
+          }
+        />
+      </div>
 
       {/* Main 3-Column SaaS Workbench */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10">
         {/* Left Sidebar Navigation */}
         <Sidebar
           activeTab={activeTab}

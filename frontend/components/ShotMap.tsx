@@ -15,32 +15,36 @@ export default function ShotMap({ url }: ShotMapProps) {
     : `${API_BASE.replace("/api", "")}${url}`;
 
   return (
-    <div className="p-6 rounded-2xl bg-[#131B2E] border border-[#1E2A40] shadow-xl space-y-4 h-full flex flex-col justify-between">
-      <div className="flex items-center justify-between pb-3 border-b border-[#1E2A40]">
-        <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-          <Crosshair className="w-5 h-5 text-[#D0FF41]" />
-          <span>Ball Trajectories</span>
+    <div className="p-6 md:p-8 rounded-3xl bg-[#0A0F1D]/80 backdrop-blur-2xl border border-white/5 shadow-2xl space-y-6 h-full flex flex-col justify-between hover:shadow-cyan-500/10 transition-all duration-500">
+      <div className="flex items-center justify-between pb-5 border-b border-white/5">
+        <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
+            <Crosshair className="w-5 h-5" />
+          </div>
+          Ball Trajectories
         </h3>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#0E1626] text-[#D0FF41] border border-[#1E2A40]">
+        <span className="text-xs font-bold px-3 py-1.5 rounded-lg bg-white/5 text-white/50 border border-white/10 uppercase tracking-widest">
           Shot Map
         </span>
       </div>
 
       <div className="flex flex-col items-center justify-center flex-1">
-        <div className="relative w-full max-w-[280px] aspect-[5/8] rounded-xl bg-[#0E1626] border border-[#1E2A40] p-2 overflow-hidden group hover:border-[#D0FF41] transition-colors">
+        <div className="relative w-full max-w-[320px] aspect-[5/8] rounded-2xl bg-white/[0.02] border border-white/10 p-2 overflow-hidden group hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(34,211,238,0.15)] transition-all duration-500">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={fullUrl}
             alt="Shot Trajectory Map"
-            className="w-full h-full object-contain mix-blend-screen group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-contain mix-blend-screen group-hover:scale-[1.03] transition-transform duration-700 ease-out"
           />
         </div>
       </div>
 
-      <div className="p-3 rounded-xl bg-[#0E1626] border border-[#1E2A40] flex items-center gap-2 text-xs text-[#8E9BAE]">
-        <Info className="w-4 h-4 text-[#D0FF41] shrink-0" />
-        <p>
-          Color scale indicates shot speed (<span className="text-[#0250B0] font-bold">Blue</span> = Slower, <span className="text-[#D0FF41] font-bold">Volt Lime</span> = Faster)
+      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-3 text-xs text-white/60">
+        <div className="p-2 rounded-lg bg-white/5 text-cyan-400">
+          <Info className="w-4 h-4 shrink-0" />
+        </div>
+        <p className="leading-relaxed">
+          Color scale indicates shot speed (<span className="text-blue-400 font-black">Blue</span> = Slower, <span className="text-cyan-400 font-black">Cyan</span> = Faster)
         </p>
       </div>
     </div>

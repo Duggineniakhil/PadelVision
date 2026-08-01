@@ -134,6 +134,7 @@ def generate_heatmap(
                 aspect="auto",
                 vmin=0,
                 vmax=1,
+                zorder=2,
             )
         elif xs:
             ax.scatter(xs, ys, c="red", s=30, alpha=0.5, zorder=5)

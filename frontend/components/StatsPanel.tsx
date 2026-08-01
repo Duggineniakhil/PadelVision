@@ -79,47 +79,46 @@ export default function StatsPanel({
   ] satisfies { label: string; key: MetricKey; unit: string; icon: typeof Activity }[];
 
   return (
-    <div className="p-6 rounded-2xl bg-[#131B2E] border border-[#1E2A40] shadow-xl space-y-6">
+    <div className="p-6 md:p-8 rounded-3xl bg-[#0A0F1D]/80 backdrop-blur-2xl border border-white/5 shadow-2xl space-y-8 hover:shadow-cyan-500/10 transition-all duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-[#1E2A40]">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#0250B0] flex items-center justify-center font-bold text-xs text-white">
-            <Users className="w-4 h-4" />
+      <div className="flex items-center justify-between pb-5 border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
+            <Users className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-bold text-white">Padel Match Stats</h3>
-        </div>
-
-        <div className="px-3 py-1 rounded-full bg-[#0E1626] border border-[#1E2A40] text-xs font-bold text-[#8E9BAE] uppercase tracking-wider">
-          2 Teams / 4 Players
+          <div>
+            <h3 className="text-lg font-black text-white tracking-tight">Match Statistics</h3>
+            <p className="text-xs font-medium text-white/50 uppercase tracking-widest mt-0.5">2 Teams • 4 Players</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-[#8E9BAE] uppercase">Team B</span>
-          <div className="w-7 h-7 rounded-lg bg-pink-600 flex items-center justify-center font-bold text-xs text-white">
-            P3+P4
+          <span className="text-xs font-bold text-white/50 uppercase tracking-wider hidden sm:inline-block">Team B</span>
+          <div className="px-3 py-1.5 rounded-lg bg-pink-500/20 border border-pink-500/30 text-pink-400 font-bold text-xs tracking-wider">
+            P3 + P4
           </div>
         </div>
       </div>
 
       {/* Team Header Row */}
-      <div className="grid grid-cols-3 gap-4 text-center">
-        <div className="col-span-1" />
-        <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#0250B0]/20 border border-[#0250B0]/30">
-          <div className="w-6 h-6 rounded-lg bg-[#0250B0] flex items-center justify-center font-bold text-xs text-white">
-            P1+P2
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
+        <div className="flex flex-col items-start gap-1">
+          <div className="px-3 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 font-bold text-xs tracking-wider mb-2">
+            P1 + P2
           </div>
-          <span className="text-sm font-semibold text-white">Team A</span>
+          <span className="text-sm font-black text-white uppercase tracking-widest">Team A</span>
         </div>
-        <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-pink-600/20 border border-pink-600/30">
-          <span className="text-sm font-semibold text-white">Team B</span>
-          <div className="w-6 h-6 rounded-lg bg-pink-600 flex items-center justify-center font-bold text-xs text-white">
-            P3+P4
+        <div className="w-[1px] h-12 bg-white/10" />
+        <div className="flex flex-col items-end gap-1">
+          <div className="px-3 py-1.5 rounded-lg bg-pink-500/20 border border-pink-500/30 text-pink-400 font-bold text-xs tracking-wider mb-2">
+            P3 + P4
           </div>
+          <span className="text-sm font-black text-white uppercase tracking-widest">Team B</span>
         </div>
       </div>
 
       {/* Metrics List */}
-      <div className="space-y-5">
+      <div className="space-y-6">
         {metrics.map((m) => {
           const valA = Number(teamA[m.key] || 0);
           const valB = Number(teamB[m.key] || 0);
@@ -129,34 +128,34 @@ export default function StatsPanel({
           const aWins = valA >= valB;
 
           return (
-            <div key={m.key} className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className={`font-mono text-sm ${aWins ? "text-[#D0FF41] font-bold" : "text-[#C6D0DD]"}`}>
-                  {valA} {m.unit}
+            <div key={m.key} className="space-y-2 group">
+              <div className="flex items-center justify-between text-sm font-semibold">
+                <span className={`font-mono text-base ${aWins ? "text-cyan-400 font-black drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "text-white/60"}`}>
+                  {valA} <span className="text-[10px] text-white/40 font-sans ml-0.5">{m.unit}</span>
                 </span>
 
-                <span className="text-[#8E9BAE] uppercase tracking-wider flex items-center gap-1">
-                  <m.icon className="w-3 h-3" />
+                <span className="text-white/50 uppercase tracking-widest flex items-center gap-1.5 text-[11px] font-bold">
+                  <m.icon className="w-3.5 h-3.5 group-hover:text-white transition-colors duration-300" />
                   {m.label}
                 </span>
 
-                <span className={`font-mono text-sm ${!aWins ? "text-[#D0FF41] font-bold" : "text-[#C6D0DD]"}`}>
-                  {valB} {m.unit}
+                <span className={`font-mono text-base ${!aWins ? "text-pink-400 font-black drop-shadow-[0_0_8px_rgba(244,114,182,0.5)]" : "text-white/60"}`}>
+                  {valB} <span className="text-[10px] text-white/40 font-sans ml-0.5">{m.unit}</span>
                 </span>
               </div>
 
               {/* Progress Comparison Bar */}
-              <div className="h-2.5 w-full bg-[#0E1626] rounded-full overflow-hidden flex gap-0.5 p-0.5 border border-[#1E2A40]">
+              <div className="h-3 w-full bg-black/40 rounded-full overflow-hidden flex gap-1 p-0.5 border border-white/5 shadow-inner">
                 <div
                   style={{ width: `${pctA}%` }}
-                  className={`h-full rounded-l-full transition-all duration-500 ${
-                    aWins ? "bg-[#0250B0]" : "bg-[#1E2A40]"
+                  className={`h-full rounded-l-full transition-all duration-1000 ease-out ${
+                    aWins ? "bg-gradient-to-r from-blue-600 to-cyan-400" : "bg-white/10"
                   }`}
                 />
                 <div
                   style={{ width: `${pctB}%` }}
-                  className={`h-full rounded-r-full transition-all duration-500 ${
-                    !aWins ? "bg-pink-500" : "bg-[#1E2A40]"
+                  className={`h-full rounded-r-full transition-all duration-1000 ease-out ${
+                    !aWins ? "bg-gradient-to-l from-rose-600 to-pink-400" : "bg-white/10"
                   }`}
                 />
               </div>
@@ -166,38 +165,36 @@ export default function StatsPanel({
       </div>
 
       {/* Individual Player Breakdown */}
-      <div className="pt-4 border-t border-[#1E2A40]">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-[#8E9BAE] mb-3 flex items-center gap-2">
-          <Users className="w-4 h-4" />
+      <div className="pt-6 border-t border-white/5">
+        <h4 className="text-[11px] font-bold uppercase tracking-widest text-white/50 mb-4 flex items-center gap-2">
+          <Activity className="w-4 h-4" />
           Individual Breakdown
         </h4>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {players.map(({ p, name, color, label }) => (
-            <div key={label} className="p-3 rounded-xl bg-[#0E1626] border border-[#1E2A40]">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-lg ${color} flex items-center justify-center font-bold text-xs text-white`}>
-                    {label}
-                  </div>
-                  <span className="text-sm font-semibold text-white">{name}</span>
+            <div key={label} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center font-black text-xs text-white shadow-md`}>
+                  {label}
                 </div>
+                <span className="text-sm font-bold text-white tracking-wide">{name}</span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-[#8E9BAE]">Shots:</span>
-                  <span className="font-mono text-white ml-1">{p.total_shots}</span>
+              <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Shots</span>
+                  <span className="font-mono text-white text-sm mt-0.5">{p.total_shots}</span>
                 </div>
-                <div>
-                  <span className="text-[#8E9BAE]">Avg Speed:</span>
-                  <span className="font-mono text-white ml-1">{p.avg_shot_speed} km/h</span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Avg Spd</span>
+                  <span className="font-mono text-white text-sm mt-0.5">{p.avg_shot_speed} <span className="text-[9px] text-white/30">km/h</span></span>
                 </div>
-                <div>
-                  <span className="text-[#8E9BAE]">Max Speed:</span>
-                  <span className="font-mono text-white ml-1">{p.max_shot_speed} km/h</span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Max Spd</span>
+                  <span className="font-mono text-white text-sm mt-0.5">{p.max_shot_speed} <span className="text-[9px] text-white/30">km/h</span></span>
                 </div>
-                <div>
-                  <span className="text-[#8E9BAE]">Dist:</span>
-                  <span className="font-mono text-white ml-1">{p.distance_covered}m</span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Distance</span>
+                  <span className="font-mono text-white text-sm mt-0.5">{p.distance_covered} <span className="text-[9px] text-white/30">m</span></span>
                 </div>
               </div>
             </div>

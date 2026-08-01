@@ -26,24 +26,11 @@ class PlayerTracker:
         return points
 
     def choose_and_filter_players(self, court_landmarks, player_detections):
-        chosen_players = self.choose_players(court_landmarks, player_detections)
-        filtered_player_detections = []
-        for player_dict in player_detections:
-            filtered_player_dict = {}
-            for i, track_id in enumerate(chosen_players):
-                if track_id in player_dict:
-                    filtered_player_dict[i + 1] = player_dict[track_id]
-            filtered_player_detections.append(filtered_player_dict)
-        return filtered_player_detections
-
-    def choose_players(self, court_landmarks, player_detections):
-        # Calculate rough court bounding box
         court_points = self._flatten_court_landmarks(court_landmarks)
         court_xs = [pt[0] for pt in court_points]
         court_ys = [pt[1] for pt in court_points]
         
         if not court_xs or not court_ys:
-            # Fallback if court landmarks are missing
             min_x, max_x, min_y, max_y = 0, 10000, 0, 10000
         else:
             pad_x = 200
@@ -51,20 +38,76 @@ class PlayerTracker:
             min_x, max_x = min(court_xs) - pad_x, max(court_xs) + pad_x
             min_y, max_y = min(court_ys) - pad_y, max(court_ys) + pad_y
 
-        track_lifespans = {}
-        for player_dict in player_detections:
-            for track_id, bbox in player_dict.items():
-                center = get_center_of_bbox(bbox)
-                cx, cy = center
-                # Check if player is near/inside court
-                if min_x <= cx <= max_x and min_y <= cy <= max_y:
-                    track_lifespans[track_id] = track_lifespans.get(track_id, 0) + 1
+        filtered_player_detections = []
+        player_last_positions = {1: None, 2: None, 3: None, 4: None}
+        current_track_ids = {1: None, 2: None, 3: None, 4: None}
         
-        # Sort by longest lived in court area
-        sorted_tracks = sorted(track_lifespans.items(), key=lambda x: x[1], reverse=True)
-        # Choose the top 4 tracks
-        chosen_players = [t[0] for t in sorted_tracks[:4]]
-        return chosen_players
+        for player_dict in player_detections:
+            # Filter tracks that are inside the court area
+            valid_tracks = {}
+            for track_id, bbox in player_dict.items():
+                cx, cy = get_center_of_bbox(bbox)
+                if min_x <= cx <= max_x and min_y <= cy <= max_y:
+                    valid_tracks[track_id] = bbox
+            
+            filtered_frame_dict = {}
+            available_tracks = set(valid_tracks.keys())
+            
+            # 1. Keep existing track IDs if they are still valid
+            for p_id in range(1, 5):
+                t_id = current_track_ids[p_id]
+                if t_id is not None and t_id in available_tracks:
+                    filtered_frame_dict[p_id] = valid_tracks[t_id]
+                    player_last_positions[p_id] = get_center_of_bbox(valid_tracks[t_id])
+                    available_tracks.remove(t_id)
+            
+            # 2. For unassigned player IDs, find the closest available track
+            unassigned_pids = [p for p in range(1, 5) if p not in filtered_frame_dict]
+            
+            # If this is the very first assignment, sort available tracks spatially 
+            # to consistently assign 1=TopLeft, 2=TopRight, 3=BotLeft, 4=BotRight
+            if len(unassigned_pids) == 4 and all(pos is None for pos in player_last_positions.values()) and len(available_tracks) >= 4:
+                sorted_tracks = sorted(list(available_tracks), key=lambda tid: (get_center_of_bbox(valid_tracks[tid])[1], get_center_of_bbox(valid_tracks[tid])[0]))
+                for i, p_id in enumerate(range(1, 5)):
+                    t_id = sorted_tracks[i]
+                    filtered_frame_dict[p_id] = valid_tracks[t_id]
+                    player_last_positions[p_id] = get_center_of_bbox(valid_tracks[t_id])
+                    current_track_ids[p_id] = t_id
+                    available_tracks.remove(t_id)
+            else:
+                for p_id in unassigned_pids:
+                    last_pos = player_last_positions[p_id]
+                    if last_pos is None:
+                        # If no last position, just pick an available track
+                        if available_tracks:
+                            t_id = available_tracks.pop()
+                            filtered_frame_dict[p_id] = valid_tracks[t_id]
+                            player_last_positions[p_id] = get_center_of_bbox(valid_tracks[t_id])
+                            current_track_ids[p_id] = t_id
+                    else:
+                        # Find closest available track
+                        best_tid = None
+                        best_dist = float('inf')
+                        for t_id in available_tracks:
+                            cx, cy = get_center_of_bbox(valid_tracks[t_id])
+                            dist = ((cx - last_pos[0])**2 + (cy - last_pos[1])**2)**0.5
+                            if dist < best_dist:
+                                best_dist = dist
+                                best_tid = t_id
+                        
+                        # Distance threshold to avoid jumping to wrong track
+                        if best_tid is not None and best_dist < 300:
+                            filtered_frame_dict[p_id] = valid_tracks[best_tid]
+                            player_last_positions[p_id] = get_center_of_bbox(valid_tracks[best_tid])
+                            current_track_ids[p_id] = best_tid
+                            available_tracks.remove(best_tid)
+                        else:
+                            # Track lost for this player
+                            current_track_ids[p_id] = None
+            
+            filtered_player_detections.append(filtered_frame_dict)
+            
+        return filtered_player_detections
 
     def detect_frames(self,frames, read_from_stub=False, stub_path=None):
         player_detections = []

@@ -1,0 +1,12 @@
+{
+  "include": [
+    "backend",
+    "."
+  ],
+  "extraPaths": [
+    "c:/Akhil/PadelVision-main/backend",
+    "c:/Akhil/PadelVision-main/.venv311/Lib/site-packages"
+  ],
+  "venvPath": "c:/Akhil/PadelVision-main",
+  "venv": ".venv311"
+}

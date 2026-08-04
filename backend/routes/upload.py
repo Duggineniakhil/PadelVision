@@ -29,7 +29,7 @@ UPLOADS_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'uploads')
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
-MAX_FILE_SIZE_MB = 500
+MAX_FILE_SIZE_MB = 10240
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 UPLOAD_CHUNK_SIZE = 1024 * 1024
 

@@ -121,10 +121,11 @@ def generate_statistics(
 
     for i in range(1, 5):
         num_shots = df[f'player_{i}_number_of_shots'].replace(0, float('nan'))
-        df[f'player_{i}_average_shot_speed'] = df[f'player_{i}_total_shot_speed'] / num_shots
+        df[f'player_{i}_average_shot_speed'] = (df[f'player_{i}_total_shot_speed'] / num_shots).fillna(0)
+        num_intervals = df[f'player_{i}_number_of_shots'].replace(0, 1)
         df[f'player_{i}_average_player_speed'] = (
-            df[f'player_{i}_total_player_speed'] / max(1, len(ball_shot_frames))
-        )
+            df[f'player_{i}_total_player_speed'] / num_intervals
+        ).fillna(0)
 
     last = df.iloc[-1] if not df.empty else pd.Series(dtype=float)
 

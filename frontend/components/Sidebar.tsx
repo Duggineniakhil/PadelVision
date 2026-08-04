@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Crosshair, BarChart3, Trophy, Share2, Users } from "lucide-react";
+import { Home, Crosshair, BarChart3, Share2, Users } from "lucide-react";
 
 interface SidebarProps {
   activeTab: string;
@@ -23,7 +23,6 @@ export default function Sidebar({
     { id: "home", label: "Home", icon: Home },
     { id: "shots", label: "Shot Explorer", icon: Crosshair },
     { id: "stats", label: "Game Stats", icon: BarChart3 },
-    { id: "leaderboards", label: "Leaderboards", icon: Trophy },
   ];
 
   const players = [

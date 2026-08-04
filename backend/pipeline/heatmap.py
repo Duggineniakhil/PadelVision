@@ -82,62 +82,41 @@ def generate_heatmap(
                         min(raw_pxs), max(raw_pxs), min(raw_pys), max(raw_pys))
 
         if len(xs) >= 2:
-            real_x_std = np.std(xs)
-            real_y_std = np.std(ys)
-        else:
-            real_x_std = 0
-            real_y_std = 0
-
-        # Aggressively use fake data for the demo if there's any hint of bad tracking
-        if len(xs) < 50 or (real_x_std <= 0.15 and real_y_std <= 0.15):
-            logger.info("  Player %d: Real data (len=%d, x_std=%.2f, y_std=%.2f) insufficient. Generating fake heatmap data for demo", 
-                        player_id, len(xs), real_x_std, real_y_std)
-            if player_id == 1:
-                center_x, center_y = actual_court_w * 0.25, actual_court_h * 0.15
-            elif player_id == 2:
-                center_x, center_y = actual_court_w * 0.75, actual_court_h * 0.15
-            elif player_id == 3:
-                center_x, center_y = actual_court_w * 0.25, actual_court_h * 0.85
-            else:
-                center_x, center_y = actual_court_w * 0.75, actual_court_h * 0.85
-            
-            xs = np.random.normal(center_x, actual_court_w * 0.12, 500)
-            ys = np.random.normal(center_y, actual_court_h * 0.12, 500)
-            xs = np.clip(xs, 0, actual_court_w).tolist()
-            ys = np.clip(ys, 0, actual_court_h).tolist()
-        else:
-            logger.info("  Player %d: Using real data (len=%d, x_std=%.2f, y_std=%.2f)", 
-                        player_id, len(xs), real_x_std, real_y_std)
-
-        if len(xs) >= 2:
             x_std = np.std(xs)
             y_std = np.std(ys)
             logger.info("  Court coords: x=[%.1f, %.1f] std=%.2f  y=[%.1f, %.1f] std=%.2f",
                         min(xs), max(xs), x_std, min(ys), max(ys), y_std)
 
-            grid_size = 100
-            heatmap_data, xedges, yedges = np.histogram2d(
-                xs, ys,
-                bins=grid_size,
-                range=[[0, actual_court_w], [0, actual_court_h]],
-            )
-            sigma = max(2, min(5, grid_size // 20))
-            heatmap_data = gaussian_filter(heatmap_data, sigma=sigma)
-            heatmap_data = heatmap_data / (heatmap_data.max() + 1e-8)
+            # If positions have spread, generate a proper Gaussian heatmap
+            if x_std > 0.05 or y_std > 0.05:
+                grid_size = 100
+                heatmap_data, xedges, yedges = np.histogram2d(
+                    xs, ys,
+                    bins=grid_size,
+                    range=[[0, actual_court_w], [0, actual_court_h]],
+                )
+                sigma = max(2, min(5, grid_size // 20))
+                heatmap_data = gaussian_filter(heatmap_data, sigma=sigma)
+                heatmap_data = heatmap_data / (heatmap_data.max() + 1e-8)
 
-            ax.imshow(
-                heatmap_data.T,
-                extent=[0, actual_court_w, 0, actual_court_h],
-                origin="lower",
-                cmap="YlOrRd",
-                alpha=0.65,
-                aspect="auto",
-                vmin=0,
-                vmax=1,
-                zorder=2,
-            )
+                ax.imshow(
+                    heatmap_data.T,
+                    extent=[0, actual_court_w, 0, actual_court_h],
+                    origin="lower",
+                    cmap="YlOrRd",
+                    alpha=0.65,
+                    aspect="auto",
+                    vmin=0,
+                    vmax=1,
+                    zorder=2,
+                )
+            else:
+                logger.warning("  Player %d: positions have near-zero spread, using scatter plot", player_id)
+                ax.scatter(xs, ys, c="red", s=40, alpha=0.6, zorder=5)
         elif xs:
             ax.scatter(xs, ys, c="red", s=30, alpha=0.5, zorder=5)
+        else:
+            logger.info("  Player %d: No position data detected, rendering blank court", player_id)
 
         ax.set_xlim(0, actual_court_w)
         ax.set_ylim(0, actual_court_h)

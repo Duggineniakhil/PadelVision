@@ -59,9 +59,7 @@ export default function AnalysisDashboard() {
               ? "Home"
               : activeTab === "shots"
               ? "Shot Explorer"
-              : activeTab === "stats"
-              ? "Game Stats"
-              : "Leaderboards"
+              : "Game Stats"
           }
         />
       </div>
@@ -101,7 +99,7 @@ export default function AnalysisDashboard() {
           {/* Visualizations & Match Data */}
           {activeTab === "home" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-2">
                 <StatsPanel
                   player1={analysisData.player_1}
                   player2={analysisData.player_2}
@@ -110,16 +108,13 @@ export default function AnalysisDashboard() {
                 />
               </div>
 
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-1 space-y-6">
                 <HeatmapView
                   p1Url={analysisData.heatmap_p1_url}
                   p2Url={analysisData.heatmap_p2_url}
                   p3Url={analysisData.heatmap_p3_url}
                   p4Url={analysisData.heatmap_p4_url}
                 />
-              </div>
-
-              <div className="lg:col-span-1">
                 <ShotMap url={analysisData.shot_map_url} />
               </div>
             </div>
@@ -148,24 +143,7 @@ export default function AnalysisDashboard() {
             </div>
           )}
 
-          {activeTab === "leaderboards" && (
-            <div className="p-8 rounded-2xl bg-[#131B2E] border border-[#1E2A40] text-center space-y-4">
-              <h3 className="text-xl font-bold text-white">Leaderboards & Global Rankings</h3>
-              <p className="text-sm text-[#8E9BAE]">
-                Comparing Team A (Player 1 & 2) & Team B (Player 3 & 4) metrics against tournament averages.
-              </p>
-              <div className="grid grid-cols-2 gap-4 max-w-md mx-auto pt-4">
-                <div className="p-4 rounded-xl bg-[#0E1626] border border-[#1E2A40]">
-                  <p className="text-xs text-[#8E9BAE]">Serve Speed Rank</p>
-                  <p className="text-2xl font-black text-[#D0FF41]">Top 5%</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#0E1626] border border-[#1E2A40]">
-                  <p className="text-xs text-[#8E9BAE]">Rally Endurance</p>
-                  <p className="text-2xl font-black text-[#0250B0]">Top 12%</p>
-                </div>
-              </div>
-            </div>
-          )}
+
         </main>
 
         {/* Right Highlights Panel */}

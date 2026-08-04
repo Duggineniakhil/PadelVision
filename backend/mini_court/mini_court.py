@@ -7,10 +7,18 @@ from utils import convert_meters_to_pixel_distance
 
 class MiniCourt():
     def __init__(self, frame):
-        self.drawing_rectangle_width = 250
-        self.drawing_rectangle_height = 400
-        self.buffer = 50
-        self.padding_court = 20
+        frame_h, frame_w = frame.shape[0], frame.shape[1]
+        scale = min(frame_w / 1280.0, frame_h / 720.0)
+        scale = max(0.65, min(1.2, scale))
+
+        # Compact mini-court: ~35% of frame height (maintaining 1:2 padel court aspect ratio)
+        self.court_drawing_height = int(max(140, min(240, frame_h * 0.35)))
+        self.court_drawing_width = int(self.court_drawing_height / 2.0)
+        self.padding_court = int(max(6, 8 * scale))
+        self.buffer = int(max(10, 15 * scale))
+
+        self.drawing_rectangle_width = self.court_drawing_width + 2 * self.padding_court
+        self.drawing_rectangle_height = self.court_drawing_height + 2 * self.padding_court
 
         self.set_canvas_background_box_position(frame)
         self.set_mini_court_position()
@@ -28,8 +36,9 @@ class MiniCourt():
         return self.court_drawing_width
 
     def set_canvas_background_box_position(self, frame):
+        # Position in RIGHT-DOWN (bottom-right) corner
         self.end_x = frame.shape[1] - self.buffer
-        self.end_y = self.buffer + self.drawing_rectangle_height
+        self.end_y = frame.shape[0] - self.buffer
         self.start_x = self.end_x - self.drawing_rectangle_width
         self.start_y = self.end_y - self.drawing_rectangle_height
 
@@ -99,25 +108,28 @@ class MiniCourt():
         for p1, p2 in self.lines:
             pt1 = (int(self.points[p1][0]), int(self.points[p1][1]))
             pt2 = (int(self.points[p2][0]), int(self.points[p2][1]))
-            cv2.line(frame, pt1, pt2, (255, 255, 255), 2)
+            cv2.line(frame, pt1, pt2, (255, 255, 255), 1, cv2.LINE_AA)
             
-        # Draw Net (Thicker blue line)
+        # Draw Net (Thicker colored line)
         pt_net_l = (int(self.points["NetL"][0]), int(self.points["NetL"][1]))
         pt_net_r = (int(self.points["NetR"][0]), int(self.points["NetR"][1]))
-        cv2.line(frame, pt_net_l, pt_net_r, (255, 100, 100), 3)
+        cv2.line(frame, pt_net_l, pt_net_r, (255, 120, 80), 2, cv2.LINE_AA)
 
         return frame
 
     def draw_background_rectangle(self, frame):
         shapes = np.zeros_like(frame, np.uint8)
-        # Draw a beautiful blue padel court background
-        cv2.rectangle(shapes, (self.start_x, self.start_y), (self.end_x, self.end_y), (150, 70, 0), cv2.FILLED) # Outer area
-        cv2.rectangle(shapes, (self.court_start_x, self.court_start_y), (self.court_end_x, self.court_end_y), (180, 80, 20), cv2.FILLED) # Inner court area (Blue)
+        # Outer court surround (dark slate blue)
+        cv2.rectangle(shapes, (self.start_x, self.start_y), (self.end_x, self.end_y), (40, 30, 20), cv2.FILLED)
+        # Inner court area (vibrant padel blue)
+        cv2.rectangle(shapes, (self.court_start_x, self.court_start_y), (self.court_end_x, self.court_end_y), (180, 80, 20), cv2.FILLED)
         
         out = frame.copy()
-        alpha = 0.5
+        alpha = 0.6
         mask = shapes.astype(bool)
-        out[mask] = cv2.addWeighted(frame, alpha, shapes, 1 - alpha, 0)[mask]
+        out[mask] = cv2.addWeighted(frame, 1 - alpha, shapes, alpha, 0)[mask]
+        # Clean white border around mini court box
+        cv2.rectangle(out, (self.start_x, self.start_y), (self.end_x, self.end_y), (255, 255, 255), 1, cv2.LINE_AA)
         return out
 
     def draw_mini_court(self, frames):
@@ -132,7 +144,13 @@ class MiniCourt():
     def draw_points_on_mini_court(self, frames, positions, color=(0, 255, 0)):
         for frame_num, frame in enumerate(frames):
             if frame_num < len(positions):
-                for _, position in positions[frame_num].items():
+                for pid, position in positions[frame_num].items():
                     x, y = position
-                    cv2.circle(frame, (int(x), int(y)), 6, color, -1)
+                    if color == (0, 255, 0):
+                        # P1/P2 = Cyan/Light Blue, P3/P4 = Magenta/Pink
+                        p_color = (255, 210, 50) if pid in (1, 2) else (180, 80, 255)
+                    else:
+                        p_color = color
+                    cv2.circle(frame, (int(x), int(y)), 4, p_color, -1, cv2.LINE_AA)
+                    cv2.circle(frame, (int(x), int(y)), 4, (255, 255, 255), 1, cv2.LINE_AA)
         return frames

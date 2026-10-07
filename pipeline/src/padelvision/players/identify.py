@@ -43,10 +43,14 @@ MAX_CANDIDATES = 4
 WALL_BAND_M = 0.5
 BYSTANDER_MIN_S = 3.0
 EDGE_PX = 2
+# Foot-point jitter in pixels (box bottom jitters more than its centre); converted to
+# metres per row via the calibration, so far-side positions get larger uncertainty.
+FOOT_STD_U_PX = 1.0
+FOOT_STD_V_PX = 2.0
 
 OUT_COLUMNS = [
     "frame", "t", "player", "team", "track_id", "conf",
-    "x1", "y1", "x2", "y2", "x_m", "y_m", "valid",
+    "x1", "y1", "x2", "y2", "x_m", "y_m", "valid", "rxx", "rxy", "ryy",
 ]  # fmt: skip
 
 
@@ -64,12 +68,26 @@ def ground_positions(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
     feet = np.c_[(out.x1 + out.x2) / 2, out.y2]
     xy = cal.to_court(feet) if len(out) else np.empty((0, 2))
     out["x_m"], out["y_m"] = xy[:, 0], xy[:, 1]
+    out["rxx"], out["rxy"], out["ryy"] = _foot_covariance(cal, feet, xy)
     out["foot_clipped"] = out.y2 >= cal.image_size[1] - EDGE_PX
     out["on_court"] = (out.x_m.abs() <= COURT_WIDTH_M / 2 + COURT_MARGIN_X_M) & (
         out.y_m.abs() <= COURT_LENGTH_M / 2 + COURT_MARGIN_Y_M
     )
     out["bystander"] = out.track_id.isin(_wall_huggers(out[out.on_court]))
     return out
+
+
+def _foot_covariance(cal: CourtCalibration, feet: np.ndarray, xy: np.ndarray):
+    """Position covariance (m^2) of each foot point from pixel jitter, via the local Jacobian."""
+    if not len(feet):
+        return np.empty(0), np.empty(0), np.empty(0)
+    du = cal.to_court(feet + [1.0, 0.0]) - xy  # metres per pixel right
+    dv = cal.to_court(feet + [0.0, 1.0]) - xy  # metres per pixel down
+    su2, sv2 = FOOT_STD_U_PX**2, FOOT_STD_V_PX**2
+    rxx = su2 * du[:, 0] ** 2 + sv2 * dv[:, 0] ** 2
+    rxy = su2 * du[:, 0] * du[:, 1] + sv2 * dv[:, 0] * dv[:, 1]
+    ryy = su2 * du[:, 1] ** 2 + sv2 * dv[:, 1] ** 2
+    return rxx, rxy, ryy
 
 
 def _wall_huggers(dets: pd.DataFrame) -> set[int]:
@@ -90,10 +108,11 @@ def assign_players(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
     track_to_slot: dict[int, int] = {}
     rows = []
 
-    for frame, fdets in g.groupby("frame", sort=True):
+    records = g.to_dict("records")  # once: per-frame pandas access is far too slow
+    for frame, frecs in itertools.groupby(records, key=lambda c: c["frame"]):
+        frecs = list(frecs)
         for team in ("near", "far"):
-            side = fdets[(fdets.y_m < 0) == (team == "near")]
-            cands = _dedupe(side)
+            cands = _dedupe([c for c in frecs if (c["y_m"] < 0) == (team == "near")])
             side_slots = [p for p, s in SLOT_TEAM.items() if s == team]
 
             mapped, unmapped = [], []
@@ -127,15 +146,15 @@ def assign_players(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
                 rows.append((
                     frame, c["t"], player, team, tid, c["conf"],
                     c["x1"], c["y1"], c["x2"], c["y2"], c["x_m"], c["y_m"],
-                    not c["foot_clipped"],
+                    not c["foot_clipped"], c["rxx"], c["rxy"], c["ryy"],
                 ))  # fmt: skip
 
     return pd.DataFrame(rows, columns=OUT_COLUMNS)
 
 
-def _dedupe(side: pd.DataFrame) -> list[dict]:
+def _dedupe(side: list[dict]) -> list[dict]:
     kept: list[dict] = []
-    for c in side.to_dict("records"):  # sorted by conf, highest first
+    for c in side:  # sorted by conf, highest first
         if all(np.hypot(c["x_m"] - k["x_m"], c["y_m"] - k["y_m"]) > DUPLICATE_DIST_M for k in kept):
             kept.append(c)
     return kept

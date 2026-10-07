@@ -83,3 +83,15 @@ def test_team_formation():
     assert near["formation"]["both_net"] == pytest.approx(0.5, abs=0.03)
     assert near["formation"]["split"] == pytest.approx(0.5, abs=0.03)
     assert near["partner_spacing_m"] > 5.0
+
+
+def test_far_side_depth_noise_does_not_create_sprints():
+    rng = np.random.default_rng(1)
+    f = np.arange(600)  # 20 s standing still near the far baseline
+    sy = 0.3  # ~1 px of foot jitter at the far baseline of a low camera
+    players = _players({3: (f, rng.normal(1.0, 0.03, 600), rng.normal(8.0, sy, 600))})
+    players["rxx"], players["rxy"], players["ryy"] = 0.03**2, 0.0, sy**2
+    p3 = _stats(players, 600)["players"]["3"]
+    assert p3["sprints"] == 0
+    assert p3["peak_speed_mps"] < 1.5
+    assert p3["distance_m"] < 6.0  # raw jitter path would be ~190 m

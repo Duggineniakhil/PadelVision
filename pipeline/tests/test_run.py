@@ -77,3 +77,26 @@ def test_restats_from_cached_detections(tmp_path, cal, monkeypatch):
     again = run_module.restats(out)
     assert again["players"] == first["players"]
     assert again["analysed"]["frames"] == first["analysed"]["frames"] == 100
+
+
+def test_detection_cache_invalidated_when_settings_change(tmp_path, cal, monkeypatch):
+    calls = []
+
+    class CountingTracker(FakeTracker):
+        def track(self, video, stride=1, max_frames=None):
+            calls.append(max_frames)
+            yield from super().track(video, stride, max_frames)
+
+    monkeypatch.setattr(person_tracker, "PersonTracker", CountingTracker)
+    monkeypatch.setattr(run_module, "weights_path", lambda name: "fake.pt")
+    video = tmp_path / "match.avi"
+    _blank_video(video)
+    court = tmp_path / "court.json"
+    cal.save(court)
+    out = tmp_path / "run"
+
+    run_module.analyze(video, court, out, max_frames=60)
+    run_module.analyze(video, court, out, max_frames=60)  # same settings: cached
+    stats = run_module.analyze(video, court, out)  # full video: must re-detect
+    assert calls == [60, None]
+    assert stats["players"]["1"]["tracked_fraction"] > 0.9

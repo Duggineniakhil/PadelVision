@@ -5,6 +5,7 @@ runs/<name>/
   court.json            stage 1  calibration used (copy)
   court_overlay.png     stage 1  court lines projected on a frame (check alignment)
   detections.parquet    stage 2  raw person detections + tracker ids (expensive; cached)
+  detections.json       stage 2  settings the cache was made with (re-run if they differ)
   players.parquet       stage 3  4 player identities with court positions
   tracks.parquet        stage 6  smoothed positions
   stats.json            stage 6  movement metrics
@@ -57,8 +58,10 @@ def analyze(
     _save_overlay(video, info.frame_count // 2, cal, out / "court_overlay.png")
     print(f"[1] court: mean keypoint error {cal.reprojection_error_m() * 100:.0f} cm")
 
-    det_path = out / "detections.parquet"
-    if det_path.exists() and not force:
+    det_path, det_meta = out / "detections.parquet", out / "detections.json"
+    params = {"model": model, "stride": stride, "max_frames": max_frames, "imgsz": imgsz}
+    cached = det_meta.exists() and json.loads(det_meta.read_text()) == params
+    if det_path.exists() and cached and not force:
         dets = pd.read_parquet(det_path)
         print(f"[2] detections: cached ({len(dets)} boxes); use --force to recompute")
     else:
@@ -68,6 +71,7 @@ def analyze(
         print(f"[2] detections: {model} on device={tracker.device}, stride={stride}")
         dets = run_detection(tracker, video, info.fps, info.frame_count, stride, max_frames)
         dets.to_parquet(det_path)
+        det_meta.write_text(json.dumps(params))
         print(f"    {len(dets)} boxes")
 
     limit = min(info.frame_count, max_frames) if max_frames else info.frame_count

@@ -89,3 +89,25 @@ def test_slot_does_not_hop_to_a_far_away_person(cal):
     p4 = players[players.player == 4]
     assert 70 not in set(p4.track_id)
     assert set(p4.track_id) == {4, 44}  # re-acquired with the tracker's new id
+
+
+def test_wall_huggers_are_bystanders(cal):
+    rows = []
+    for f in range(150):  # 5 s
+        rows += [(f, 3, -2.0, 4.0), (f, 4, 2.0, 7.0)]
+        rows.append((f, 80, -4.9 - 0.2 * np.sin(f / 10), 0.4))  # standing at the left post
+        if f < 60:  # a player who walks to the wall and back: not a hugger
+            rows.append((f, 81, -4.8 + 1.5 * abs(np.cos(f / 20)), -3.0))
+    players = assign_players(_dets(rows), cal)
+    assert 80 not in set(players.track_id)
+    assert 81 in set(players.track_id)
+
+
+def test_newcomer_at_wall_does_not_fill_a_slot(cal):
+    rows = []
+    for f in range(90):
+        rows.append((f, 3, -2.0, 4.0))  # player 4 never seen yet: slot is free
+        if 30 <= f < 50:
+            rows.append((f, 90, -5.1, 0.3))  # brief detection at the left post
+    players = assign_players(_dets(rows), cal)
+    assert 90 not in set(players.track_id)

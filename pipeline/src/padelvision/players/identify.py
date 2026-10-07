@@ -9,6 +9,10 @@
 - Within a side, a slot keeps following its tracker id. When a new tracker id appears,
   it takes the free slot whose last position is closest, but only if the person could
   physically have got there (no hopping between bystanders on opposite sides of the court).
+- Bystanders right outside the side walls (e.g. next to the net posts) can land just inside
+  the margin. A tracker id that stays within WALL_BAND_M of a side wall for its whole life
+  of at least BYSTANDER_MIN_S is treated as a bystander: players don't hug the side wall.
+  Short-lived newcomers at the wall can't take a player slot either.
 - Feet cut off by the bottom image edge give a wrong ground position: those rows keep
   their identity but are marked `valid = False` and are excluded from metrics.
 """
@@ -36,6 +40,8 @@ MAX_SPEED_MPS = 8.0
 JUMP_TOLERANCE_M = 1.5  # position noise allowance, mostly far-side depth error
 REACQUIRE_S = 2.0  # after this long unseen, a slot may be re-filled anywhere on its side
 MAX_CANDIDATES = 4
+WALL_BAND_M = 0.5
+BYSTANDER_MIN_S = 3.0
 EDGE_PX = 2
 
 OUT_COLUMNS = [
@@ -62,13 +68,23 @@ def ground_positions(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
     out["on_court"] = (out.x_m.abs() <= COURT_WIDTH_M / 2 + COURT_MARGIN_X_M) & (
         out.y_m.abs() <= COURT_LENGTH_M / 2 + COURT_MARGIN_Y_M
     )
+    out["bystander"] = out.track_id.isin(_wall_huggers(out[out.on_court]))
     return out
+
+
+def _wall_huggers(dets: pd.DataFrame) -> set[int]:
+    tracked = dets[dets.track_id >= 0]
+    life = tracked.groupby("track_id").agg(
+        t0=("t", "min"), t1=("t", "max"), inner=("x_m", lambda x: x.abs().min())
+    )
+    hug = (life.t1 - life.t0 >= BYSTANDER_MIN_S) & (life.inner >= COURT_WIDTH_M / 2 - WALL_BAND_M)
+    return set(life.index[hug])
 
 
 def assign_players(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
     """Detections table (stage 2) -> one row per (frame, player) with court positions."""
     g = ground_positions(dets, cal)
-    g = g[g.on_court].sort_values(["frame", "conf"], ascending=[True, False])
+    g = g[g.on_court & ~g.bystander].sort_values(["frame", "conf"], ascending=[True, False])
 
     slots = {p: _Slot(p) for p in SLOT_TEAM}
     track_to_slot: dict[int, int] = {}
@@ -92,7 +108,10 @@ def assign_players(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
             mapped = mapped[:2]
 
             free = [p for p in side_slots if p not in {s for s, _ in mapped}]
-            new = [c for _, c in unmapped[:MAX_CANDIDATES]]
+            # A newcomer right at a side wall is most likely a bystander outside it; it can
+            # only take a slot once it's further in. Tracked players may still go to the wall.
+            inner = COURT_WIDTH_M / 2 - WALL_BAND_M
+            new = [c for _, c in unmapped if abs(c["x_m"]) < inner][:MAX_CANDIDATES]
             assignment = list(mapped) + _match(new, [slots[p] for p in free])
 
             for player, c in assignment:

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "padelvision"
+version = "0.1.0"
+description = "Computer-vision analytics for padel match videos"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "opencv-python>=4.8",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Heavy inference stack. Kaggle/Colab already ship torch, so this mostly adds ultralytics.
+ml = ["ultralytics>=8.3"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+padelvision = "padelvision.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

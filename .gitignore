@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Model weights: declared in models/manifest.yaml, downloaded by scripts/fetch_models.py
+models/weights/*
+!models/weights/.gitkeep
+*.pt
+*.onnx
+*.engine
+
+# Videos, datasets, pipeline outputs
+data/
+runs/
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Node
+node_modules/
+.next/
+
+# Editors / OS / tools
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.kilo/
+.env

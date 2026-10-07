@@ -10,10 +10,16 @@ it over wholesale. The full plan, phases and model strategy are in `docs/V2_PLAN
 it before starting larger work.
 
 ## Status
-Phase 0 (foundations) is done: the `padelvision` package skeleton, court geometry and calibration,
-the model manifest and fetch script, video probing, tests, and the Kaggle/Colab setup notebook.
-Next is phase 1 (player analytics). `web/` and `api/` don't exist yet. Don't invent commands
-for tooling that hasn't been set up; add them here once they exist.
+Phase 0 is done. Phase 1 (player analytics) code is written and unit-tested on synthetic data,
+but it hasn't been validated on real footage yet. That validation is the next step:
+`ml/notebooks/01_player_analytics.ipynb` on Kaggle. `web/` and `api/` don't exist yet. Don't invent
+commands for tooling that hasn't been set up; add them here once they exist.
+
+Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),
+`models/` (manifest registry, `person_tracker.py`, the only ultralytics import), `players/`
+(stage 2 detection, stage 3 on-court filtering + identities), `analytics/movement.py` (stage 6),
+`visuals.py` (heatmaps), `render.py` (preview video), `run.py` (`analyze` orchestration).
+The tuning constants (smoothing windows, speed caps, zones, margins) sit at the top of each module.
 
 ## Commands (run from repo root; Windows venv paths shown)
 ```bash
@@ -23,6 +29,10 @@ for tooling that hasn't been set up; add them here once they exist.
 .venv/Scripts/ruff format pipeline scripts
 .venv/Scripts/python scripts/fetch_models.py [name ...]  # download + verify weights
 .venv/Scripts/padelvision probe <video>                  # print video metadata
+.venv/Scripts/padelvision calibrate data/court_frame.png -o data/court.json   # local GUI
+# Kaggle/Colab only (needs GPU + [ml]):
+padelvision analyze <video> --court court.json --out runs/match1 [--stride 2] [--max-frames 900]
+padelvision render <video> --run runs/match1 --start 60 --seconds 30
 ```
 The developer's laptop **cannot process real videos**. Anything that runs models on
 video goes in a notebook under `ml/notebooks/` to be run on Kaggle/Colab. Locally, only run unit tests

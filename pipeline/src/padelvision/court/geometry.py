@@ -31,10 +31,56 @@ COURT_KEYPOINTS: dict[str, tuple[float, float]] = {
     "far_service_right": (_HW, _S),
 }
 
-# The 4 corners, in the order the calibration tool asks for them.
+# The 4 corners.
 CORNER_NAMES = ("near_left", "near_right", "far_right", "far_left")
 
+# Order the calibration tool asks for keypoints: far to near, matching how they appear on screen.
+CLICK_ORDER = (
+    "far_left",
+    "far_right",
+    "far_service_left",
+    "far_service_center",
+    "far_service_right",
+    "net_left",
+    "net_right",
+    "near_service_left",
+    "near_service_center",
+    "near_service_right",
+    "near_left",
+    "near_right",
+)
 
-def in_court(x: float, y: float, margin_m: float = 0.0) -> bool:
-    """True if a ground point (metres) lies inside the court, expanded by `margin_m`."""
-    return abs(x) <= _HW + margin_m and abs(y) <= _HL + margin_m
+# Painted lines (plus the net), as (start, end) in metres; used for drawing overlays.
+COURT_LINES: list[tuple[tuple[float, float], tuple[float, float]]] = [
+    ((-_HW, -_HL), (_HW, -_HL)),
+    ((-_HW, _HL), (_HW, _HL)),
+    ((-_HW, -_HL), (-_HW, _HL)),
+    ((_HW, -_HL), (_HW, _HL)),
+    ((-_HW, -_S), (_HW, -_S)),
+    ((-_HW, _S), (_HW, _S)),
+    ((0.0, -_S), (0.0, _S)),
+    ((-_HW, 0.0), (_HW, 0.0)),
+]
+
+# Zones by distance from the net (|y|). Net play happens inside NET_ZONE_M; back-court is
+# behind the service line; in between is the transition zone.
+NET_ZONE_M = 4.0
+BACK_ZONE_M = SERVICE_LINE_FROM_NET_M
+
+
+def in_court(x, y, margin_m: float = 0.0):
+    """True if a ground point (metres) lies inside the court, expanded by `margin_m`.
+
+    Works on scalars or numpy arrays.
+    """
+    return (abs(x) <= _HW + margin_m) & (abs(y) <= _HL + margin_m)
+
+
+def zone_of(y):
+    """'net' | 'transition' | 'back' for a distance along the court (scalar)."""
+    d = abs(y)
+    if d <= NET_ZONE_M:
+        return "net"
+    if d <= BACK_ZONE_M:
+        return "transition"
+    return "back"

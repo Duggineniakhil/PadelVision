@@ -21,8 +21,19 @@ first and then a simple local web app.
 | No way to tell if a change helped | A small hand-labelled evaluation set + metrics |
 
 ### Supported input
-A fixed camera (no pan or zoom) showing the whole court, usually from high behind one baseline.
-720p or higher, 25–60 fps, doubles (4 players).
+A fixed camera (no pan or zoom), 720p or higher, 25–60 fps, doubles (4 players).
+
+**Primary target: the developer's own footage.** A wide-angle (GoPro/phone) camera mounted low near one
+baseline, at an indoor club, 1280×720 @ 30 fps. Consequences for the pipeline:
+- **Lens distortion:** court lines are visibly curved. Phase 1 needs an undistortion step that fits
+  radial distortion from the fact that court lines must be straight. No checkerboard or training needed.
+- **The near corners are out of frame:** calibration uses whichever ≥ 4 keypoints are visible (service-line
+  ends, net-post bases, far corners), not just the 4 outer corners.
+- **The far court is compressed:** position accuracy for the far team is lower. Report per-side accuracy and
+  use looser targets for the far side.
+- **Players are small and the ball is about 5 px:** run detection at `imgsz=1280` and train the ball model at high resolution.
+
+High-camera footage (from above the back glass) is a secondary, easier case.
 
 ## 2. Architecture (kept simple)
 

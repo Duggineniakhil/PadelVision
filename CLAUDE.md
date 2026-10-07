@@ -65,6 +65,11 @@ infra/      Dockerfiles, docker-compose for local dev
 - TypeScript strict mode. API types are generated from FastAPI's OpenAPI schema rather than written by hand.
 - Overlays are drawn in the browser on a canvas from result JSON. A rendered MP4 is only an optional export.
 
+## Target footage
+The developer's own videos come from a **low, wide-angle camera near one baseline** (lens distortion,
+near corners out of frame, far court compressed, tiny ball). Design for that first; see "Supported
+input" in `docs/V2_PLAN.md`. Never assume the 4 outer corners are visible.
+
 ## Compute constraints
 The developer has no local GPU. Training and long test runs happen on **Kaggle** (preferred)
 or **Google Colab**. Notebooks in `ml/notebooks/` must:

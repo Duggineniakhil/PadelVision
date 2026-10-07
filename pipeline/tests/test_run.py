@@ -61,3 +61,19 @@ def test_analyze_and_render(tmp_path, cal, monkeypatch):
     cap = cv2.VideoCapture(str(preview))
     assert int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) == 30
     cap.release()
+
+
+def test_restats_from_cached_detections(tmp_path, cal, monkeypatch):
+    monkeypatch.setattr(person_tracker, "PersonTracker", FakeTracker)
+    monkeypatch.setattr(run_module, "weights_path", lambda name: "fake.pt")
+    video = tmp_path / "match.avi"
+    _blank_video(video)
+    court = tmp_path / "court.json"
+    cal.save(court)
+    out = tmp_path / "run"
+    first = run_module.analyze(video, court, out, stride=2, max_frames=200)
+
+    video.unlink()  # restats must not need the video
+    again = run_module.restats(out)
+    assert again["players"] == first["players"]
+    assert again["analysed"]["frames"] == first["analysed"]["frames"] == 100

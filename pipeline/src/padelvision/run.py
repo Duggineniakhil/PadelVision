@@ -70,16 +70,38 @@ def analyze(
         dets.to_parquet(det_path)
         print(f"    {len(dets)} boxes")
 
+    limit = min(info.frame_count, max_frames) if max_frames else info.frame_count
+    return _player_stages(dets, cal, info.fps, stride, limit, out)
+
+
+def restats(run_dir: str | Path, court_json: str | Path | None = None) -> dict:
+    """Re-run stages 3-7 from a run folder's cached detections. No video or GPU needed,
+    so identity/metric logic can be tuned locally on detections downloaded from Kaggle.
+
+    Needs video.json, detections.parquet and stats.json (for stride / analysed length)
+    in `run_dir`; uses `court_json` if given, else the run's court.json.
+    """
+    out = Path(run_dir)
+    info = json.loads((out / "video.json").read_text())
+    analysed = json.loads((out / "stats.json").read_text())["analysed"]
+    cal = CourtCalibration.load(court_json or out / "court.json")
+    if court_json:
+        cal.save(out / "court.json")
+    dets = pd.read_parquet(out / "detections.parquet")
+    limit = round(analysed["duration_s"] * info["fps"])
+    return _player_stages(dets, cal, info["fps"], analysed["stride"], limit, out)
+
+
+def _player_stages(dets, cal, fps: float, stride: int, limit: int, out: Path) -> dict:
     players = assign_players(dets, cal)
     players.to_parquet(out / "players.parquet")
     print(f"[3] players: {len(players)} rows, {int((~players.valid).sum())} with feet cut off")
 
-    limit = min(info.frame_count, max_frames) if max_frames else info.frame_count
     analysed = math.ceil(limit / stride)
-    tracks = smooth_tracks(players, info.fps, stride)
+    tracks = smooth_tracks(players, fps, stride)
     tracks.to_parquet(out / "tracks.parquet")
-    stats = movement_stats(tracks, players, info.fps, stride, analysed)
-    stats["analysed"] = {"frames": analysed, "stride": stride, "duration_s": limit / info.fps}
+    stats = movement_stats(tracks, players, fps, stride, analysed)
+    stats["analysed"] = {"frames": analysed, "stride": stride, "duration_s": limit / fps}
     stats["court_error_m"] = cal.reprojection_error_m()
     (out / "stats.json").write_text(json.dumps(stats, indent=2))
     print("[6] stats.json written")

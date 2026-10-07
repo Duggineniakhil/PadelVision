@@ -39,8 +39,13 @@ half and about 1 m near the net and beyond.
 .venv/Scripts/padelvision calibrate data/court_frame.png -o data/court.json   # local GUI
 # Kaggle/Colab only (needs GPU + [ml]):
 padelvision analyze <video> --court court.json --out runs/match1 [--stride 2] [--max-frames 900]
-padelvision render <video> --run runs/match1 --start 60 --seconds 30
+padelvision render <video> --run runs/match1 --start 0 --seconds 30
+# Local again: redo stages 3-7 from a downloaded Kaggle run folder (no video/GPU needed)
+.venv/Scripts/padelvision restats data/runs/match1 [--court other_court.json]
 ```
+To tune identity or stats logic, ask for the run folder (`detections.parquet`, `video.json`,
+`stats.json`) from Kaggle and iterate locally with `restats`. Don't send the developer back to
+Kaggle for every tweak.
 The developer's laptop **cannot process real videos**. Anything that runs models on
 video goes in a notebook under `ml/notebooks/` to be run on Kaggle/Colab. Locally, only run unit tests
 on tiny synthetic fixtures.

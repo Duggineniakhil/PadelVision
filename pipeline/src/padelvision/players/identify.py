@@ -7,7 +7,8 @@
   Teams swap ends during a match; until appearance-based re-identification exists,
   ids mean "near/far side slot", not a specific person across changeovers.
 - Within a side, a slot keeps following its tracker id. When a new tracker id appears,
-  it takes the free slot whose last position is closest.
+  it takes the free slot whose last position is closest, but only if the person could
+  physically have got there (no hopping between bystanders on opposite sides of the court).
 - Feet cut off by the bottom image edge give a wrong ground position: those rows keep
   their identity but are marked `valid = False` and are excluded from metrics.
 """
@@ -21,12 +22,20 @@ import numpy as np
 import pandas as pd
 
 from padelvision.court.calibration import CourtCalibration
-from padelvision.court.geometry import in_court
+from padelvision.court.geometry import COURT_LENGTH_M, COURT_WIDTH_M
 
 SLOT_TEAM = {1: "near", 2: "near", 3: "far", 4: "far"}
-COURT_MARGIN_M = 0.5
+# Side walls are solid, so nobody plays outside them: keep the sideways margin tight
+# (bystanders stand right next to the net posts). Depth is less accurate, so allow more.
+COURT_MARGIN_X_M = 0.25
+COURT_MARGIN_Y_M = 0.5
 DUPLICATE_DIST_M = 0.4  # two boxes whose feet are this close are the same person
-NEW_SLOT_COST_M = 2.0  # cost of filling a never-used slot vs. re-using a known one
+NEW_SLOT_COST_M = 2.0  # cost of filling a never-used (or long-lost) slot
+UNASSIGNED_COST_M = 3.0  # cost of leaving a free slot empty this frame
+MAX_SPEED_MPS = 8.0
+JUMP_TOLERANCE_M = 1.5  # position noise allowance, mostly far-side depth error
+REACQUIRE_S = 2.0  # after this long unseen, a slot may be re-filled anywhere on its side
+MAX_CANDIDATES = 4
 EDGE_PX = 2
 
 OUT_COLUMNS = [
@@ -40,6 +49,7 @@ class _Slot:
     player: int
     track_id: int | None = None
     last_xy: np.ndarray | None = None
+    last_t: float | None = None
 
 
 def ground_positions(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
@@ -49,7 +59,9 @@ def ground_positions(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
     xy = cal.to_court(feet) if len(out) else np.empty((0, 2))
     out["x_m"], out["y_m"] = xy[:, 0], xy[:, 1]
     out["foot_clipped"] = out.y2 >= cal.image_size[1] - EDGE_PX
-    out["on_court"] = in_court(out.x_m, out.y_m, COURT_MARGIN_M)
+    out["on_court"] = (out.x_m.abs() <= COURT_WIDTH_M / 2 + COURT_MARGIN_X_M) & (
+        out.y_m.abs() <= COURT_LENGTH_M / 2 + COURT_MARGIN_Y_M
+    )
     return out
 
 
@@ -80,7 +92,7 @@ def assign_players(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
             mapped = mapped[:2]
 
             free = [p for p in side_slots if p not in {s for s, _ in mapped}]
-            new = [c for _, c in unmapped[: len(free)]]
+            new = [c for _, c in unmapped[:MAX_CANDIDATES]]
             assignment = list(mapped) + _match(new, [slots[p] for p in free])
 
             for player, c in assignment:
@@ -92,6 +104,7 @@ def assign_players(dets: pd.DataFrame, cal: CourtCalibration) -> pd.DataFrame:
                     slot.track_id = tid
                     track_to_slot[tid] = player
                 slot.last_xy = np.array([c["x_m"], c["y_m"]])
+                slot.last_t = c["t"]
                 rows.append((
                     frame, c["t"], player, team, tid, c["conf"],
                     c["x1"], c["y1"], c["x2"], c["y2"], c["x_m"], c["y_m"],
@@ -110,17 +123,33 @@ def _dedupe(side: pd.DataFrame) -> list[dict]:
 
 
 def _match(cands: list[dict], free: list[_Slot]) -> list[tuple[int, dict]]:
-    """Assign new detections to free slots minimising total distance (<= 2x2, brute force)."""
-    if not cands:
+    """Assign new detections to free slots (<= 2 slots, brute force).
+
+    Minimises total distance; a slot may stay empty, and a recently seen slot can't take
+    a detection further away than the person could have moved.
+    """
+    if not cands or not free:
         return []
 
     def cost(slot: _Slot, c: dict) -> float:
-        if slot.last_xy is None:
+        if slot.last_xy is None or slot.last_t is None:
             return NEW_SLOT_COST_M
-        return float(np.hypot(*(slot.last_xy - [c["x_m"], c["y_m"]])))
+        dt = c["t"] - slot.last_t
+        if dt > REACQUIRE_S:
+            return NEW_SLOT_COST_M
+        dist = float(np.hypot(*(slot.last_xy - [c["x_m"], c["y_m"]])))
+        return dist if dist <= MAX_SPEED_MPS * dt + JUMP_TOLERANCE_M else np.inf
 
-    best = min(
-        itertools.permutations(free, len(cands)),
-        key=lambda perm: sum(cost(s, c) for s, c in zip(perm, cands, strict=True)),
-    )
-    return [(s.player, c) for s, c in zip(best, cands, strict=True)]
+    options = [None, *range(len(cands))]
+    best, best_cost = [], np.inf
+    for choice in itertools.product(options, repeat=len(free)):
+        used = [i for i in choice if i is not None]
+        if len(used) != len(set(used)):
+            continue
+        total = sum(
+            UNASSIGNED_COST_M if i is None else cost(s, cands[i])
+            for s, i in zip(free, choice, strict=True)
+        )
+        if total < best_cost:
+            best, best_cost = list(zip(free, choice, strict=True)), total
+    return [(s.player, cands[i]) for s, i in best if i is not None]

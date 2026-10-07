@@ -49,6 +49,13 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_restats(args: argparse.Namespace) -> int:
+    from padelvision.run import restats
+
+    restats(args.run, args.court)
+    return 0
+
+
 def _cmd_render(args: argparse.Namespace) -> int:
     from pathlib import Path
 
@@ -99,6 +106,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--device", default=None, help="e.g. 0 or cpu (default: auto)")
     p.add_argument("--force", action="store_true", help="recompute cached detections")
     p.set_defaults(func=_cmd_analyze)
+
+    p = sub.add_parser("restats", help="redo identities/stats/heatmaps from cached detections")
+    p.add_argument("run", help="run folder with video.json, detections.parquet, stats.json")
+    p.add_argument("--court", default=None, help="use a different court.json")
+    p.set_defaults(func=_cmd_restats)
 
     p = sub.add_parser("render", help="annotated preview video from a run folder")
     p.add_argument("video")

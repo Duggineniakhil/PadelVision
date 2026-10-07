@@ -27,6 +27,11 @@ def render_preview(
     writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
 
     by_frame = {f: g for f, g in players.groupby("frame")}
+    if players.empty or first > players.frame.max() or first + seconds * fps < players.frame.min():
+        print(
+            f"warning: {start_s:.0f}-{start_s + seconds:.0f}s has no analysed frames "
+            f"(analysed up to {players.frame.max() / fps if len(players) else 0:.0f}s)"
+        )
     mini = MiniCourt(height_px=min(300, h // 2))
     last = None
     try:

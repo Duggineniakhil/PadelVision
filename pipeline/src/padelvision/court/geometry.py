@@ -62,6 +62,18 @@ COURT_LINES: list[tuple[tuple[float, float], tuple[float, float]]] = [
     ((-_HW, 0.0), (_HW, 0.0)),
 ]
 
+# Named straight court lines usable as calibration constraints: (a, b, c) with a*x + b*y + c = 0.
+# The side lines are where the floor meets the side walls.
+NAMED_LINES: dict[str, tuple[float, float, float]] = {
+    "left_side": (1.0, 0.0, _HW),
+    "right_side": (1.0, 0.0, -_HW),
+    "center_line": (1.0, 0.0, 0.0),
+    "near_service_line": (0.0, 1.0, _S),
+    "far_service_line": (0.0, 1.0, -_S),
+    "near_baseline": (0.0, 1.0, _HL),
+    "far_baseline": (0.0, 1.0, -_HL),
+}
+
 # Zones by distance from the net (|y|). Net play happens inside NET_ZONE_M; back-court is
 # behind the service line; in between is the transition zone.
 NET_ZONE_M = 4.0

@@ -21,6 +21,13 @@ Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, 
 `visuals.py` (heatmaps), `render.py` (preview video), `run.py` (`analyze` orchestration).
 The tuning constants (smoothing windows, speed caps, zones, margins) sit at the top of each module.
 
+Calibration notes: the lens uses a **division model** (the polynomial model couldn't straighten
+GoPro lines). Constraints can be keypoints and/or **named court lines** (`NAMED_LINES` in
+`geometry.py`); the lens and homography are refined jointly. Freeing the distortion centre
+overfits, so keep it fixed. Calibrations for specific videos live in `ml/calibrations/<video stem>.json`.
+For the developer's low camera, depth near the net is about 6 px/m: expect roughly 0.3 m error in the near
+half and about 1 m near the net and beyond.
+
 ## Commands (run from repo root; Windows venv paths shown)
 ```bash
 .venv/Scripts/python -m pip install -e "pipeline[dev]"   # add [ml] for ultralytics

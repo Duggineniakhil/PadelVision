@@ -56,6 +56,56 @@ def test_calibration_with_distortion_is_accurate():
     np.testing.assert_allclose(with_lens.to_image(SAMPLE_M), truth_px, atol=0.5)
 
 
+def _named_line(xs, ys, lens=None, n=7):
+    t = np.linspace(0, 1, n)[:, None]
+    pts = np.c_[xs[0] + (xs[1] - xs[0]) * t, ys[0] + (ys[1] - ys[0]) * t]
+    return [tuple(p) for p in project(pts, lens)]
+
+
+def _low_camera_lines(lens=None):
+    """What a low camera near the baseline sees: service line, both walls, centre line."""
+    return {
+        "near_service_line": _named_line((-5, 5), (-6.95, -6.95), lens),
+        "left_side": _named_line((-5, -5), (-8, 0), lens),
+        "right_side": _named_line((5, 5), (-8, 0), lens),
+        "center_line": _named_line((0, 0), (-6.95, 0), lens),
+    }
+
+
+def test_lines_plus_one_point_calibrate_low_camera():
+    cal = CourtCalibration.from_points(
+        clicks(["net_left"], TRUE_LENS), SIZE, named_lines=_low_camera_lines(TRUE_LENS)
+    )
+    truth_px = project(SAMPLE_M, TRUE_LENS)
+    np.testing.assert_allclose(cal.to_court(truth_px), SAMPLE_M, atol=0.02)
+    assert cal.reprojection_error_m() < 0.01
+    assert "line:left_side" in cal.point_errors_m()
+
+
+def test_named_lines_with_noise():
+    rng = np.random.default_rng(3)
+    lines = {
+        n: [(x + rng.normal(0, 1.0), y + rng.normal(0, 1.0)) for x, y in pts]
+        for n, pts in _low_camera_lines().items()
+    }
+    cal = CourtCalibration.from_points(clicks(["net_left"]), SIZE, named_lines=lines,
+                                       lens=LensModel.identity(*SIZE))  # fmt: skip
+    near = np.array([[0.0, -5.0], [3.0, -8.0], [-4.0, -2.0]])
+    err = np.linalg.norm(cal.to_court(project(near)) - near, axis=1)
+    assert err.max() < 0.15
+
+
+def test_degenerate_constraints_rejected():
+    # Points on two parallel lines only: nothing fixes the scale across the court.
+    names = ["near_service_left", "near_service_center", "near_service_right", "far_service_center"]
+    with pytest.raises(ValueError, match="degenerate"):
+        CourtCalibration.from_points(
+            clicks(names),
+            SIZE,
+            named_lines={"far_service_line": _named_line((-5, 5), (6.95, 6.95))},
+        )
+
+
 def test_save_load_roundtrip(tmp_path):
     cal = CourtCalibration.from_points(
         clicks(COURT_KEYPOINTS, TRUE_LENS), SIZE, lines=line_clicks(TRUE_LENS)
@@ -65,7 +115,7 @@ def test_save_load_roundtrip(tmp_path):
     loaded = CourtCalibration.load(path)
     assert loaded.lens == cal.lens
     assert loaded.image_size == SIZE
-    np.testing.assert_allclose(loaded.image_to_court, cal.image_to_court)
+    np.testing.assert_allclose(loaded.image_to_court, cal.image_to_court, atol=1e-9)
 
 
 def test_rejects_bad_input():

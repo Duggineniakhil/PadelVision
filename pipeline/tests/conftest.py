@@ -15,7 +15,7 @@ TRUE_H = np.array(
         [0.0, 0.035, 1.0],
     ]
 )
-TRUE_LENS = LensModel(k1=-0.25, k2=0.05, f=1280.0, cx=640.0, cy=360.0)
+TRUE_LENS = LensModel(k1=-0.6, k2=0.15, f=1280.0, cx=640.0, cy=360.0)
 
 
 def project(court_pts, lens: LensModel | None = None) -> np.ndarray:

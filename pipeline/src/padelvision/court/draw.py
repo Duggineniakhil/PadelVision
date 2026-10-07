@@ -16,14 +16,21 @@ def draw_court_overlay(
 ) -> np.ndarray:
     """Project the court lines into the image (curved where the lens distorts)."""
     out = frame.copy()
+    h, w = frame.shape[:2]
     for (x0, y0), (x1, y1) in COURT_LINES:
-        t = np.linspace(0, 1, 60)[:, None]
+        t = np.linspace(0, 1, 120)[:, None]
         pts = cal.to_image(np.c_[x0 + (x1 - x0) * t, y0 + (y1 - y0) * t])
-        cv2.polylines(out, [pts.round().astype(np.int32)], False, color, thickness, cv2.LINE_AA)
+        # Draw only parts that project sensibly (not behind the camera / outside the lens).
+        ok = np.isfinite(pts).all(axis=1) & (np.abs(pts - [w / 2, h / 2]) < [w, h]).all(axis=1)
+        for run in np.split(np.arange(len(pts)), np.nonzero(np.diff(ok.astype(int)))[0] + 1):
+            if ok[run[0]] and len(run) > 1:
+                seg = pts[run].round().astype(np.int32)
+                cv2.polylines(out, [seg], False, color, thickness, cv2.LINE_AA)
     for name, (px, py) in cal.image_points.items():
         cv2.circle(out, (round(px), round(py)), 5, (0, 0, 255), -1, cv2.LINE_AA)
         proj = cal.to_image(np.array([COURT_KEYPOINTS[name]]))[0]
-        cv2.circle(out, (round(proj[0]), round(proj[1])), 9, (255, 255, 255), 1, cv2.LINE_AA)
+        if np.isfinite(proj).all():
+            cv2.circle(out, (round(proj[0]), round(proj[1])), 9, (255, 255, 255), 1, cv2.LINE_AA)
     return out
 
 

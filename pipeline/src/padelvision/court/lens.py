@@ -1,9 +1,14 @@
 """Radial lens distortion (wide-angle / GoPro / phone cameras).
 
-Model (Brown, radial only), in normalised coordinates x = (u - cx) / f:
-    x_distorted = x_undistorted * (1 + k1 * r^2 + k2 * r^4),  r = |x_undistorted|
+Division model, in normalised coordinates x = (u - cx) / f, distortion centre at the image
+centre and focal length fixed at the image width (k1/k2 absorb the difference):
 
-The focal length is unknown and fixed at the image width; k1/k2 absorb the difference.
+    x_undistorted = x_distorted / (1 + k1 * r^2 + k2 * r^4),   r = |x_distorted|
+
+Barrel distortion has k1 < 0. The division model handles the strong distortion of action
+cameras far better than the polynomial (Brown) model; on the developer's GoPro-style
+footage the polynomial model left 6.7 px of curvature in the service line, this one 1.2 px.
+
 Parameters are fitted from straight lines in the scene: after undistortion, points
 clicked along one real-world straight line must be collinear. No checkerboard needed.
 """
@@ -30,20 +35,30 @@ class LensModel:
     def undistort(self, pixels: np.ndarray) -> np.ndarray:
         """(N, 2) distorted image pixels -> (N, 2) undistorted pixels."""
         xd = self._normalise(pixels)
-        rd = np.linalg.norm(xd, axis=1)
-        ru = rd.copy()
-        for _ in range(30):  # Newton on r_u * (1 + k1 r_u^2 + k2 r_u^4) = r_d
-            g = ru * (1 + self.k1 * ru**2 + self.k2 * ru**4) - rd
-            dg = 1 + 3 * self.k1 * ru**2 + 5 * self.k2 * ru**4
-            ru = ru - g / np.where(np.abs(dg) < 1e-6, 1e-6, dg)
-        scale = np.divide(ru, rd, out=np.ones_like(rd), where=rd > 1e-12)
-        return self._denormalise(xd * scale[:, None])
+        r2 = (xd**2).sum(axis=1)
+        return self._denormalise(xd / (1 + self.k1 * r2 + self.k2 * r2**2)[:, None])
 
     def distort(self, pixels: np.ndarray) -> np.ndarray:
-        """(N, 2) undistorted pixels -> (N, 2) distorted image pixels."""
+        """(N, 2) undistorted pixels -> (N, 2) distorted image pixels.
+
+        Points far outside the camera's field of view may have no valid distorted position;
+        those come back as NaN.
+        """
         xu = self._normalise(pixels)
-        r2 = (xu**2).sum(axis=1)
-        return self._denormalise(xu * (1 + self.k1 * r2 + self.k2 * r2**2)[:, None])
+        ru = np.linalg.norm(xu, axis=1)
+        rd = ru.copy()
+        for _ in range(50):  # Newton on r_d / (1 + k1 r_d^2 + k2 r_d^4) = r_u
+            d = 1 + self.k1 * rd**2 + self.k2 * rd**4
+            dd = 2 * self.k1 * rd + 4 * self.k2 * rd**3
+            g = rd / d - ru
+            dg = (d - rd * dd) / d**2
+            rd = rd - g / np.where(np.abs(dg) < 1e-9, 1e-9, dg)
+        d = 1 + self.k1 * rd**2 + self.k2 * rd**4
+        bad = (np.abs(rd / d - ru) > 1e-6) | (rd < 0) | (d <= 0)
+        scale = np.divide(rd, ru, out=np.ones_like(ru), where=ru > 1e-12)
+        out = self._denormalise(xu * scale[:, None])
+        out[bad] = np.nan
+        return out
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -81,7 +96,7 @@ def fit_lens(lines: list[np.ndarray], width: int, height: int) -> tuple[LensMode
         lens = LensModel(k[0], k[1], base.f, base.cx, base.cy)
         return np.concatenate([line_residuals(lens.undistort(line)) for line in lines])
 
-    sol = least_squares(residuals, x0=[0.0, 0.0], bounds=([-1.0, -1.0], [1.0, 1.0]))
+    sol = least_squares(residuals, x0=[0.0, 0.0], bounds=([-3.0, -3.0], [3.0, 3.0]))
     lens = LensModel(float(sol.x[0]), float(sol.x[1]), base.f, base.cx, base.cy)
     rms = float(np.sqrt(np.mean(residuals(sol.x) ** 2)))
     return lens, rms

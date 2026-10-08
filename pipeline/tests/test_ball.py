@@ -131,3 +131,14 @@ def test_bootstrap_review_pack_and_labeler(tmp_path, cal, monkeypatch):
     assert resumed.i == 3
     rows = list(csv.DictReader(open(pack / "labels.csv")))
     assert [r["status"] for r in rows][1:] == ["ball", "none"]
+
+
+def test_dull_or_weak_tracks_are_not_balls():
+    rows = []
+    for f in range(40):
+        rows.append((f, 100 + 8 * f, 300.0, 0.9, 0.7, 60.0))  # yellow, sharp: ball
+        rows.append((f, 100 + 8 * f, 500.0, 0.9, 0.0, 60.0))  # grey (a leg, a racket)
+        rows.append((f, 100 + 8 * f, 650.0, 0.9, 0.7, 15.0))  # weak motion (far background)
+    cands = pd.DataFrame(rows, columns=["frame", "u", "v", "score", "color", "motion"])
+    labels = pseudo_labels(cands)
+    assert set(labels.v.round()) == {300.0}

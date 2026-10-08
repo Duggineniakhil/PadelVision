@@ -23,6 +23,11 @@ MAX_MISSES = 2
 MIN_TRACK_LEN = 6  # detections
 MIN_SPEED_PX = 2.5  # median px/frame: the ball in play moves; static flicker doesn't
 MAX_JERK_PX = 9.0  # median |second difference|, after accounting for missed frames
+# Track-level appearance (medians over the track), tuned on 132 hand-checked pseudo-labels from
+# the developer's footage: precision went from ~40% to ~90% while keeping ~84% of real balls.
+# Rejects players' legs/rackets/shoes and people on neighbouring courts: dull and slow-changing.
+MIN_TRACK_COLOR = 0.25  # fraction of ball-coloured pixels
+MIN_TRACK_MOTION = 30.0  # frame-difference strength
 
 PSEUDO_COLUMNS = ["frame", "u", "v", "track", "score"]
 
@@ -33,6 +38,8 @@ class _Track:
     frames: list[int] = field(default_factory=list)
     pts: list[np.ndarray] = field(default_factory=list)
     scores: list[float] = field(default_factory=list)
+    colors: list[float] = field(default_factory=list)
+    motions: list[float] = field(default_factory=list)
 
     def predict(self, frame: int) -> np.ndarray:
         if len(self.pts) < 2:
@@ -63,6 +70,8 @@ def link_tracks(cands: pd.DataFrame) -> pd.DataFrame:
         )
         finished += done
         pts = group[["u", "v"]].to_numpy()
+        colors = group.color.to_numpy() if "color" in group else np.ones(len(group))
+        motions = group.motion.to_numpy() if "motion" in group else np.full(len(group), 255.0)
         free = list(range(len(group)))
         # Longer tracks choose first: they have reliable velocity estimates.
         for t in sorted(active, key=lambda t: -len(t.pts)):
@@ -77,9 +86,12 @@ def link_tracks(cands: pd.DataFrame) -> pd.DataFrame:
                 t.frames.append(frame)
                 t.pts.append(pts[k])
                 t.scores.append(float(group.score.iloc[k]))
+                t.colors.append(float(colors[k]))
+                t.motions.append(float(motions[k]))
                 idx_of.setdefault(t.id, []).append(row)
         for k in free:  # every unmatched candidate may start a new track
-            t = _Track(next_id, [frame], [pts[k]], [float(group.score.iloc[k])])
+            t = _Track(next_id, [frame], [pts[k]], [float(group.score.iloc[k])],
+                       [float(colors[k])], [float(motions[k])])  # fmt: skip
             idx_of[t.id] = [group.index[k]]
             next_id += 1
             active.append(t)
@@ -101,6 +113,8 @@ def pseudo_labels(cands: pd.DataFrame) -> pd.DataFrame:
 
 def _ball_like(t: _Track) -> bool:
     if len(t.pts) < MIN_TRACK_LEN:
+        return False
+    if np.median(t.colors) < MIN_TRACK_COLOR or np.median(t.motions) < MIN_TRACK_MOTION:
         return False
     f = np.asarray(t.frames, dtype=float)
     p = np.asarray(t.pts)

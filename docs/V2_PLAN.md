@@ -122,7 +122,13 @@ Code loads models only through `padelvision.models.registry.load(name)`.
 - *Done when:* court error is under 15 cm, there are fewer than 2 ID switches per minute, and distances look right on the test clips.
 
 **Phase 2 — Ball model (Kaggle)**
-- Collect and label data, train, add stage 4 with smoothing.
+- **Bootstrap labels without a model** (`ml/notebooks/02_ball_bootstrap.ipynb`): three-frame
+  differencing finds small moving blobs in the court area, outside player boxes. Trajectory
+  linking keeps only smooth, fast ball flights, and those become pseudo-labels.
+- **Human review** (local, `padelvision label-ball`): about 150 pseudo-labelled frames (to measure
+  pseudo-label precision) plus about 150 random in-play frames (to measure recall). These labels are the eval set.
+- **Train** YOLO11 on the pseudo-labels on Kaggle (eval frames excluded), evaluate on the reviewed set,
+  then add stage 4 (ball tracking with smoothing).
 - *Done when:* recall is at least 80% and precision at least 90% (within 10 px) on visible-ball eval frames.
 
 **Phase 3 — Events**

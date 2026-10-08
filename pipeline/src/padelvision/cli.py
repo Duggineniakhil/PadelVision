@@ -56,6 +56,27 @@ def _cmd_restats(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_ball_bootstrap(args: argparse.Namespace) -> int:
+    from padelvision.ball.bootstrap import bootstrap
+
+    bootstrap(args.video, args.run, args.max_frames)
+    return 0
+
+
+def _cmd_ball_review_pack(args: argparse.Namespace) -> int:
+    from padelvision.ball.bootstrap import make_review_pack
+
+    make_review_pack(args.video, args.run, args.out, args.n_pseudo, args.n_random)
+    return 0
+
+
+def _cmd_label_ball(args: argparse.Namespace) -> int:
+    from padelvision.ball.label_tool import run
+
+    run(args.pack)
+    return 0
+
+
 def _cmd_render(args: argparse.Namespace) -> int:
     from pathlib import Path
 
@@ -111,6 +132,24 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("run", help="run folder with video.json, detections.parquet, stats.json")
     p.add_argument("--court", default=None, help="use a different court.json")
     p.set_defaults(func=_cmd_restats)
+
+    p = sub.add_parser("ball-bootstrap", help="classical ball candidates + pseudo-labels")
+    p.add_argument("video")
+    p.add_argument("--run", required=True, help="run folder with court.json + detections")
+    p.add_argument("--max-frames", type=int, default=None)
+    p.set_defaults(func=_cmd_ball_bootstrap)
+
+    p = sub.add_parser("ball-review-pack", help="sample frames for human ball labelling")
+    p.add_argument("video")
+    p.add_argument("--run", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--n-pseudo", type=int, default=150)
+    p.add_argument("--n-random", type=int, default=150)
+    p.set_defaults(func=_cmd_ball_review_pack)
+
+    p = sub.add_parser("label-ball", help="label a ball review pack (local, GUI)")
+    p.add_argument("pack", help="review pack folder with pack.json")
+    p.set_defaults(func=_cmd_label_ball)
 
     p = sub.add_parser("render", help="annotated preview video from a run folder")
     p.add_argument("video")

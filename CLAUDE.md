@@ -10,10 +10,12 @@ it over wholesale. The full plan, phases and model strategy are in `docs/V2_PLAN
 it before starting larger work.
 
 ## Status
-Phase 0 is done. Phase 1 (player analytics) code is written and unit-tested on synthetic data,
-but it hasn't been validated on real footage yet. That validation is the next step:
-`ml/notebooks/01_player_analytics.ipynb` on Kaggle. `web/` and `api/` don't exist yet. Don't invent
-commands for tooling that hasn't been set up; add them here once they exist.
+Phases 0–1 are done. Player analytics has been validated on the developer's Test_video: bystander
+filtering, identity gating and Kalman smoothing were tuned on real detections.
+Phase 2 (ball) is in progress. The label bootstrap is built (`ball/candidates.py`, `ball/link.py`,
+`ball/bootstrap.py`, `ball/label_tool.py`, notebook `02_ball_bootstrap.ipynb`). Next is reviewing the
+pack locally and then a training notebook. `web/` and `api/` don't exist yet. Don't invent commands
+for tooling that hasn't been set up; add them here once they exist.
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),
 `models/` (manifest registry, `person_tracker.py`, the only ultralytics import), `players/`
@@ -40,6 +42,10 @@ half and about 1 m near the net and beyond.
 # Kaggle/Colab only (needs GPU + [ml]):
 padelvision analyze <video> --court court.json --out runs/match1 [--stride 2] [--max-frames 900]
 padelvision render <video> --run runs/match1 --start 0 --seconds 30
+padelvision ball-bootstrap <video> --run runs/match1          # classical candidates + pseudo-labels
+padelvision ball-review-pack <video> --run runs/match1 --out ball_review
+# Local: label the downloaded review pack (Y = ring on ball, click = ball, N = none, M = motion view)
+.venv/Scripts/padelvision label-ball data/ball_review
 # Local again: redo stages 3-7 from a downloaded Kaggle run folder (no video/GPU needed)
 .venv/Scripts/padelvision restats data/runs/match1 [--court other_court.json]
 ```

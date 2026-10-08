@@ -306,5 +306,5 @@
   1083,
   1084
  ],
- "note": "Eval frames: 150 random in-play frames + 150 frames with classical pseudo-labels. Labels list only visually confirmed balls (crop review); other frames are unverified, not 'no ball'. New balls found by any model are added after crop review (pooling)."
+ "note": "Eval frames: 150 random in-play frames + 150 frames with classical pseudo-labels. Labels in Test_video_ball.csv are pooled location reviews: 'ball' (several per frame possible), 'not_ball', 'unsure'. Detections on unreviewed spots are 'unverified', not wrong; review their crops and add verdicts to grow the pool."
 }

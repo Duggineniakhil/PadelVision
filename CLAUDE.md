@@ -13,8 +13,12 @@ it before starting larger work.
 Phases 0–1 are done. Player analytics has been validated on the developer's Test_video: bystander
 filtering, identity gating and Kalman smoothing were tuned on real detections.
 Phase 2 (ball) is in progress. The label bootstrap is built (`ball/candidates.py`, `ball/link.py`,
-`ball/bootstrap.py`, `ball/label_tool.py`, notebook `02_ball_bootstrap.ipynb`). Next is reviewing the
-pack locally and then a training notebook. `web/` and `api/` don't exist yet. Don't invent commands
+`ball/bootstrap.py`, `ball/label_tool.py`, notebook `02_ball_bootstrap.ipynb`). The pseudo-label track
+filter was tuned on hand-checked crops (precision ~85%). Eval labels are in `ml/eval/labels/` (93 visually
+confirmed balls; unlabelled frames are *unverified*, not "no ball"; new balls are added by pooled crop review).
+Next is the pretrained-detector comparison (`03_ball_bakeoff.ipynb`, `ball/evaluate.py`,
+`models/ball_detectors.py`: COCO sports ball, V1 padel YOLO, TrackNet, Roboflow Universe models via a
+Kaggle secret `ROBOFLOW_API_KEY`). Then fine-tune the winner on pseudo-labels if needed. `web/` and `api/` don't exist yet. Don't invent commands
 for tooling that hasn't been set up; add them here once they exist.
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),

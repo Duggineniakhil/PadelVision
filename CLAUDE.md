@@ -18,7 +18,12 @@ filter was tuned on hand-checked crops (precision ~85%). Eval labels are in `ml/
 confirmed balls; unlabelled frames are *unverified*, not "no ball"; new balls are added by pooled crop review).
 Next is the pretrained-detector comparison (`03_ball_bakeoff.ipynb`, `ball/evaluate.py`,
 `models/ball_detectors.py`: COCO sports ball, V1 padel YOLO, TrackNet, Roboflow Universe models via a
-Kaggle secret `ROBOFLOW_API_KEY`). Then fine-tune the winner on pseudo-labels if needed. `web/` and `api/` don't exist yet. Don't invent commands
+Kaggle secret `ROBOFLOW_API_KEY`). Bake-off result with pooled labels (207 balls, 401 non-ball spots):
+Roboflow `padel-ball-detection-nazbq/4` F1 0.68 > COCO sports ball 0.60 > others. Hosted models are
+too costly per frame, so we train our own: `04_train_ball.ipynb` + `ball/dataset.py` fine-tune YOLO11s on our
+pseudo-labels (`ml/datasets/Test_video_ball_pseudo.csv`) plus Universe datasets downloaded inside Kaggle.
+Train/test split: 20 s blocks (odd blocks = test, 2 s margin) to avoid near-duplicate leakage. The session has
+several balls on court (spares, balls in hand), so the tracker must pick the ball in play (motion). `web/` and `api/` don't exist yet. Don't invent commands
 for tooling that hasn't been set up; add them here once they exist.
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),

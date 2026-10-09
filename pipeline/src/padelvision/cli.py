@@ -94,6 +94,13 @@ def _cmd_ball_retrack(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_events(args: argparse.Namespace) -> int:
+    from padelvision.run import events
+
+    events(args.run)
+    return 0
+
+
 def _cmd_render(args: argparse.Namespace) -> int:
     from pathlib import Path
 
@@ -182,6 +189,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("ball-retrack", help="redo ball tracking from cached detections (local)")
     p.add_argument("run")
     p.set_defaults(func=_cmd_ball_retrack)
+
+    p = sub.add_parser("events", help="stage 5: hits, bounces, rallies from a run folder (local)")
+    p.add_argument("run")
+    p.set_defaults(func=_cmd_events)
 
     p = sub.add_parser("render", help="annotated preview video from a run folder")
     p.add_argument("video")

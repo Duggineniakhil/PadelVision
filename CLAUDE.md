@@ -29,7 +29,10 @@ Result: the trained `ball-detector` (manifest; GitHub release `ball-yolo11s-v1`;
 Stage 4 (`ball/track.py`, notebook 05) is done: on Test_video the ball in play is found on 55-57% of frames,
 98% of reviewed tracked positions are real balls, and 75% of motion-found moving balls are tracked within 10 px.
 When two balls move at once it can follow the wrong (real) ball: rally context in phase 3 should fix that.
-Next is phase 3 (hits, bounces, rallies). `web/` and `api/` don't exist yet. Don't invent commands
+Phase 3 (stage 5, `events.py`) in progress: sharp turns of the ball's image path (inside tracklets and at
+tracklet junctions) classified as hit (ball in a player's reach zone AND ball size consistent with that
+player's depth: a low camera puts far balls inside near players' boxes), floor bounce (down then up the
+image; gets a court position) or wall. Ball detections now carry `size` (min box side, px). `web/` and `api/` don't exist yet. Don't invent commands
 for tooling that hasn't been set up; add them here once they exist.
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),
@@ -65,6 +68,7 @@ padelvision ball-track <video> --run runs/match1               # stage 4: ball i
 # Local again: redo stages 3-7 from a downloaded Kaggle run folder (no video/GPU needed)
 .venv/Scripts/padelvision restats data/runs/match1 [--court other_court.json]
 .venv/Scripts/padelvision ball-retrack data/runs/match1   # redo ball tracking from cached ball detections
+.venv/Scripts/padelvision events data/runs/match1         # stage 5: hits/bounces/rallies (ml/notebooks/06)
 ```
 To tune identity or stats logic, ask for the run folder (`detections.parquet`, `video.json`,
 `stats.json`) from Kaggle and iterate locally with `restats`. Don't send the developer back to

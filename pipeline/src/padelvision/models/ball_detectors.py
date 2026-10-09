@@ -16,7 +16,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-COLUMNS = ["frame", "u", "v", "conf"]
+# size = min(box w, h) in px: the ball diameter (motion blur stretches the other side);
+# a depth cue for telling a ball at a player's racket from one far behind them.
+COLUMNS = ["frame", "u", "v", "conf", "size"]
 
 
 class YoloBall:
@@ -49,7 +51,9 @@ class YoloBall:
             for (x1, y1, x2, y2), c in zip(
                 r.boxes.xyxy.cpu().numpy(), r.boxes.conf.cpu().numpy(), strict=True
             ):
-                rows.append((f, (x1 + x2) / 2, (y1 + y2) / 2, float(c)))
+                rows.append(
+                    (f, (x1 + x2) / 2, (y1 + y2) / 2, float(c), float(min(x2 - x1, y2 - y1)))
+                )
         return pd.DataFrame(rows, columns=COLUMNS)
 
     def detect_video(
@@ -70,7 +74,9 @@ class YoloBall:
             for (x1, y1, x2, y2), c in zip(
                 r.boxes.xyxy.cpu().numpy(), r.boxes.conf.cpu().numpy(), strict=True
             ):
-                rows.append((f, (x1 + x2) / 2, (y1 + y2) / 2, float(c)))
+                rows.append(
+                    (f, (x1 + x2) / 2, (y1 + y2) / 2, float(c), float(min(x2 - x1, y2 - y1)))
+                )
             if i and i % log_every == 0:
                 print(f"  ball detect: frame {f} ({i / (time.perf_counter() - start):.0f} fps)")
         return pd.DataFrame(rows, columns=COLUMNS)
@@ -123,7 +129,7 @@ class TrackNetBall:
             else:
                 xp, yp = self.postprocess(heat)
             if xp is not None and yp is not None:
-                rows.append((f, float(xp) * w / 640, float(yp) * h / 360, 1.0))
+                rows.append((f, float(xp) * w / 640, float(yp) * h / 360, 1.0, np.nan))
         return pd.DataFrame(rows, columns=COLUMNS)
 
 
@@ -143,5 +149,13 @@ class RoboflowBall:
         for f in ids:
             res = self.client.infer(frames[f], model_id=self.model_id)
             for p in res.get("predictions", []):
-                rows.append((f, float(p["x"]), float(p["y"]), float(p["confidence"])))
+                rows.append(
+                    (
+                        f,
+                        float(p["x"]),
+                        float(p["y"]),
+                        float(p["confidence"]),
+                        float(min(p["width"], p["height"])),
+                    )
+                )
         return pd.DataFrame(rows, columns=COLUMNS)

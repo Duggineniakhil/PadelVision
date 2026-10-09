@@ -14,6 +14,8 @@ runs/<name>/
   ball_detections.json     stage 4  settings the cache was made with
   ball.parquet             stage 4  ball in play per frame (image px; detected / interpolated)
   ball_stats.json          stage 4  tracking summary
+  events.parquet           stage 5  hits / floor bounces (with court position) / wall rebounds
+  rallies.json             stage 5  rallies with hit and bounce counts
 """
 
 from __future__ import annotations
@@ -149,7 +151,13 @@ def ball_track(
     (out / "video.json").write_text(json.dumps(info.to_dict(), indent=2))
 
     det_path, det_meta = out / "ball_detections.parquet", out / "ball_detections.json"
-    params = {"model": model, "max_frames": max_frames, "imgsz": imgsz, "conf": BALL_DETECT_CONF}
+    params = {
+        "model": model,
+        "max_frames": max_frames,
+        "imgsz": imgsz,
+        "conf": BALL_DETECT_CONF,
+        "columns": "frame,u,v,conf,size",
+    }  # older caches lack size: re-detect
     cached = det_meta.exists() and json.loads(det_meta.read_text()) == params
     if det_path.exists() and cached and not force:
         dets = pd.read_parquet(det_path)
@@ -192,3 +200,33 @@ def _ball_stages(dets: pd.DataFrame, fps: float, n_frames: int, out: Path) -> di
         f"tracklets {stats['tracklets']}"
     )
     return stats
+
+
+def events(run_dir: str | Path) -> dict:
+    """Stage 5: events + rallies from ball.parquet and players.parquet (no video or GPU)."""
+    from padelvision.events import detect_events, detect_rallies
+
+    out = Path(run_dir)
+    fps = json.loads((out / "video.json").read_text())["fps"]
+    ball = pd.read_parquet(out / "ball.parquet")
+    players = pd.read_parquet(out / "players.parquet")
+    cal = CourtCalibration.load(out / "court.json")
+    ev = detect_events(ball, players, cal, fps)
+    ev.to_parquet(out / "events.parquet")
+    rallies = detect_rallies(ball, ev, fps)
+    bounces = ev[ev.kind == "bounce"]
+    summary = {
+        "events": {k: int(v) for k, v in ev.kind.value_counts().items()},
+        "ball_size_known": bool(ball["size"].notna().any()) if "size" in ball else False,
+        "bounces_in_court": int(bounces.in_court.fillna(False).astype(bool).sum()),
+        "hits_by_player": {
+            str(int(k)): int(v) for k, v in ev[ev.kind == "hit"].player.value_counts().items()
+        },
+        "rallies": rallies,
+    }
+    (out / "rallies.json").write_text(json.dumps(summary, indent=2))
+    print(
+        f"[5] events {summary['events']}; {len(rallies)} rallies; "
+        f"hits by player {summary['hits_by_player']}"
+    )
+    return summary

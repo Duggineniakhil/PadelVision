@@ -30,7 +30,7 @@ STATIC_SPEED_PX = 1.5  # median px/frame below this = a resting ball or a fixed 
 MIN_IN_ROI = 0.5  # fraction of a tracklet's points that must lie in the court region
 MAX_INTERP_GAP = 5  # frames
 
-BALL_COLUMNS = ["frame", "t", "u", "v", "conf", "state", "track"]
+BALL_COLUMNS = ["frame", "t", "u", "v", "conf", "size", "state", "track"]
 
 
 @dataclass
@@ -39,6 +39,7 @@ class Tracklet:
     frames: list[int] = field(default_factory=list)
     pts: list[np.ndarray] = field(default_factory=list)
     confs: list[float] = field(default_factory=list)
+    sizes: list[float] = field(default_factory=list)  # ball diameter in px (NaN if unknown)
 
     def predict(self, frame: int) -> np.ndarray:
         if len(self.pts) < 2:
@@ -76,6 +77,7 @@ def link(dets: pd.DataFrame) -> list[Tracklet]:
         active = [t for t in active if frame - t.frames[-1] <= MAX_MISSES + 1]
         pts = g[["u", "v"]].to_numpy()
         confs = g.conf.to_numpy()
+        sizes = g["size"].to_numpy() if "size" in g else np.full(len(g), np.nan)
         free = list(range(len(g)))
         for t in sorted(active, key=lambda t: -t.score):  # strong tracklets choose first
             if not free:
@@ -87,8 +89,11 @@ def link(dets: pd.DataFrame) -> list[Tracklet]:
                 t.frames.append(int(frame))
                 t.pts.append(pts[k])
                 t.confs.append(float(confs[k]))
+                t.sizes.append(float(sizes[k]))
         for k in free:
-            active.append(Tracklet(next_id, [int(frame)], [pts[k]], [float(confs[k])]))
+            active.append(
+                Tracklet(next_id, [int(frame)], [pts[k]], [float(confs[k])], [float(sizes[k])])
+            )
             next_id += 1
     return done + active
 
@@ -142,18 +147,19 @@ def track_ball(
 
 
 def _expand(t: Tracklet) -> dict[int, tuple]:
-    """Tracklet -> {frame: (u, v, conf, state, track)}, filling short gaps."""
+    """Tracklet -> {frame: (u, v, conf, size, state, track)}, filling short gaps."""
     out = {}
     for i, f in enumerate(t.frames):
         u, v = t.pts[i]
-        out[f] = (float(u), float(v), t.confs[i], "detected", t.id)
+        size = t.sizes[i] if i < len(t.sizes) else np.nan
+        out[f] = (float(u), float(v), t.confs[i], size, "detected", t.id)
         if i + 1 < len(t.frames):
             gap = t.frames[i + 1] - f
             if 1 < gap <= MAX_INTERP_GAP + 1:
                 for k in range(1, gap):
                     w = k / gap
                     p = t.pts[i] * (1 - w) + t.pts[i + 1] * w
-                    out[f + k] = (float(p[0]), float(p[1]), np.nan, "interpolated", t.id)
+                    out[f + k] = (float(p[0]), float(p[1]), np.nan, np.nan, "interpolated", t.id)
     return out
 
 

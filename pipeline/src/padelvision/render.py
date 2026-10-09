@@ -18,6 +18,7 @@ def render_preview(
     out_path: str | Path,
     start_s: float = 0.0,
     seconds: float = 30.0,
+    ball: pd.DataFrame | None = None,
 ) -> Path:
     cap = cv2.VideoCapture(str(video_path))
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -27,6 +28,7 @@ def render_preview(
     writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
 
     by_frame = {f: g for f, g in players.groupby("frame")}
+    ball_at = {} if ball is None else {int(r.frame): r for r in ball.itertuples()}
     if players.empty or first > players.frame.max() or first + seconds * fps < players.frame.min():
         print(
             f"warning: {start_s:.0f}-{start_s + seconds:.0f}s has no analysed frames "
@@ -61,6 +63,7 @@ def render_preview(
                     )
                     if r.valid:
                         cv2.circle(canvas, mini.to_px((r.x_m, r.y_m)), 5, color, -1, cv2.LINE_AA)
+            _draw_ball(img, ball_at, frame)
             mh, mw = canvas.shape[:2]
             img[10 : 10 + mh, w - mw - 10 : w - 10] = canvas
             cv2.putText(
@@ -78,3 +81,20 @@ def render_preview(
         cap.release()
         writer.release()
     return Path(out_path)
+
+
+BALL_TRAIL = 8  # frames
+
+
+def _draw_ball(img, ball_at: dict, frame: int) -> None:
+    """Ball in play: filled when detected, hollow when interpolated, with a short trail."""
+    pts = [ball_at[f] for f in range(frame - BALL_TRAIL, frame + 1) if f in ball_at]
+    for a, b in zip(pts, pts[1:], strict=False):
+        if b.frame - a.frame == 1 and a.track == b.track:
+            pa, pb = (round(a.u), round(a.v)), (round(b.u), round(b.v))
+            cv2.line(img, pa, pb, (0, 220, 255), 1, cv2.LINE_AA)
+    r = ball_at.get(frame)
+    if r is not None:
+        filled = -1 if r.state == "detected" else 1
+        cv2.circle(img, (round(r.u), round(r.v)), 6, (0, 255, 255), filled, cv2.LINE_AA)
+        cv2.circle(img, (round(r.u), round(r.v)), 9, (0, 0, 0), 1, cv2.LINE_AA)

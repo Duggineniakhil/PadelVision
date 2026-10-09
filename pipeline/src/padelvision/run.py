@@ -10,6 +10,10 @@ runs/<name>/
   tracks.parquet        stage 6  smoothed positions
   stats.json            stage 6  movement metrics
   heatmaps.png          stage 7
+  ball_detections.parquet  stage 4  raw ball detections, every frame (expensive; cached)
+  ball_detections.json     stage 4  settings the cache was made with
+  ball.parquet             stage 4  ball in play per frame (image px; detected / interpolated)
+  ball_stats.json          stage 4  tracking summary
 """
 
 from __future__ import annotations
@@ -22,6 +26,8 @@ import cv2
 import pandas as pd
 
 from padelvision.analytics import movement_stats, smooth_tracks
+from padelvision.ball.candidates import court_roi
+from padelvision.ball.track import track_ball
 from padelvision.court.calibration import CourtCalibration
 from padelvision.court.draw import draw_court_overlay
 from padelvision.models import weights_path
@@ -122,3 +128,67 @@ def _save_overlay(video, frame_idx: int, cal: CourtCalibration, path: Path) -> N
     cap.release()
     if ok:
         cv2.imwrite(str(path), draw_court_overlay(frame, cal))
+
+
+BALL_DETECT_CONF = 0.05  # keep weak detections in the cache; the tracker applies its own threshold
+
+
+def ball_track(
+    video: str | Path,
+    out_dir: str | Path,
+    model: str = "ball-detector",
+    max_frames: int | None = None,
+    imgsz: int = 1280,
+    device: str | int | None = None,
+    force: bool = False,
+) -> dict:
+    """Stage 4: detect the ball on every frame (cached), then track the ball in play."""
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    info = probe(video)
+    (out / "video.json").write_text(json.dumps(info.to_dict(), indent=2))
+
+    det_path, det_meta = out / "ball_detections.parquet", out / "ball_detections.json"
+    params = {"model": model, "max_frames": max_frames, "imgsz": imgsz, "conf": BALL_DETECT_CONF}
+    cached = det_meta.exists() and json.loads(det_meta.read_text()) == params
+    if det_path.exists() and cached and not force:
+        dets = pd.read_parquet(det_path)
+        print(f"[4] ball detections: cached ({len(dets)}); use --force to recompute")
+    else:
+        from padelvision.models.ball_detectors import YoloBall
+
+        det = YoloBall(
+            weights_path(model), classes=[0], imgsz=imgsz, conf=BALL_DETECT_CONF, device=device
+        )
+        print(f"[4] ball detections: {model} on device={det.device}")
+        dets = det.detect_video(video, max_frames=max_frames)
+        dets.to_parquet(det_path)
+        det_meta.write_text(json.dumps(params))
+        print(f"    {len(dets)} detections")
+    limit = min(info.frame_count, max_frames) if max_frames else info.frame_count
+    return _ball_stages(dets, info.fps, limit, out)
+
+
+def ball_retrack(run_dir: str | Path) -> dict:
+    """Re-run ball tracking from cached ball detections (no video or GPU needed)."""
+    out = Path(run_dir)
+    info = json.loads((out / "video.json").read_text())
+    meta = json.loads((out / "ball_detections.json").read_text())
+    limit = min(info["frame_count"], meta["max_frames"] or info["frame_count"])
+    dets = pd.read_parquet(out / "ball_detections.parquet")
+    return _ball_stages(dets, info["fps"], limit, out)
+
+
+def _ball_stages(dets: pd.DataFrame, fps: float, n_frames: int, out: Path) -> dict:
+    court = out / "court.json"
+    roi = court_roi(CourtCalibration.load(court)) if court.exists() else None
+    ball, stats = track_ball(dets, fps, roi, n_frames)
+    stats["roi"] = roi is not None
+    ball.to_parquet(out / "ball.parquet")
+    (out / "ball_stats.json").write_text(json.dumps(stats, indent=2))
+    print(
+        f"[4] ball in play on {stats['frames_with_ball']} of {n_frames} frames "
+        f"({stats['coverage']:.0%}; {stats['frames_interpolated']} interpolated); "
+        f"tracklets {stats['tracklets']}"
+    )
+    return stats

@@ -52,6 +52,29 @@ class YoloBall:
                 rows.append((f, (x1 + x2) / 2, (y1 + y2) / 2, float(c)))
         return pd.DataFrame(rows, columns=COLUMNS)
 
+    def detect_video(
+        self, video, stride: int = 1, max_frames: int | None = None, log_every: int = 1000
+    ) -> pd.DataFrame:
+        """Stream a whole video (frame indices are video frame numbers)."""
+        import time
+
+        rows, start = [], time.perf_counter()
+        results = self.model.predict(
+            source=str(video), stream=True, classes=self.classes, conf=self.conf,
+            imgsz=self.imgsz, device=self.device, vid_stride=stride, verbose=False,
+        )  # fmt: skip
+        for i, r in enumerate(results):
+            f = i * stride
+            if max_frames is not None and f >= max_frames:
+                break
+            for (x1, y1, x2, y2), c in zip(
+                r.boxes.xyxy.cpu().numpy(), r.boxes.conf.cpu().numpy(), strict=True
+            ):
+                rows.append((f, (x1 + x2) / 2, (y1 + y2) / 2, float(c)))
+            if i and i % log_every == 0:
+                print(f"  ball detect: frame {f} ({i / (time.perf_counter() - start):.0f} fps)")
+        return pd.DataFrame(rows, columns=COLUMNS)
+
 
 class TrackNetBall:
     """Runs yastrebksv/TrackNet exactly as its infer_on_video.py does (640x360 input, current +

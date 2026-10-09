@@ -100,3 +100,48 @@ def test_detection_cache_invalidated_when_settings_change(tmp_path, cal, monkeyp
     stats = run_module.analyze(video, court, out)  # full video: must re-detect
     assert calls == [60, None]
     assert stats["players"]["1"]["tracked_fraction"] > 0.9
+
+
+def test_ball_track_stage_retrack_and_render(tmp_path, cal, monkeypatch):
+    import json
+
+    import pandas as pd
+
+    from padelvision.models import ball_detectors
+
+    class FakeBall:
+        def __init__(self, weights, classes=None, imgsz=1280, conf=0.05, device=None):
+            self.device = "fake"
+
+        def detect_video(self, video, stride=1, max_frames=None):
+            rows = [(f, 200 + 8 * f, 300 - 3 * f + 0.1 * f * f, 0.4) for f in range(40) if f != 15]
+            rows += [(f, 900.0, 600.0, 0.5) for f in range(40)]  # a spare ball lying still
+            return pd.DataFrame(rows, columns=["frame", "u", "v", "conf"])
+
+    monkeypatch.setattr(ball_detectors, "YoloBall", FakeBall)
+    monkeypatch.setattr(run_module, "weights_path", lambda name: "fake.pt")
+    video = tmp_path / "match.avi"
+    _blank_video(video, frames=40)
+    out = tmp_path / "run"
+    out.mkdir()
+    cal.save(out / "court.json")
+
+    stats = run_module.ball_track(video, out)
+    ball = pd.read_parquet(out / "ball.parquet")
+    assert stats["roi"] and stats["tracklets"]["static"] == 1
+    assert len(ball) == 40 and (ball.state == "interpolated").sum() == 1
+    assert (ball.u != 900.0).all()
+
+    monkeypatch.setattr(ball_detectors, "YoloBall", None)  # retrack must not need the model
+    video.unlink()
+    again = run_module.ball_retrack(out)
+    assert again == json.loads((out / "ball_stats.json").read_text())
+    assert again["frames_with_ball"] == 40
+
+    video2 = tmp_path / "again.avi"
+    _blank_video(video2, frames=40)
+    players = pd.DataFrame(
+        columns=["frame", "player", "team", "x1", "y1", "x2", "y2", "x_m", "y_m", "valid"]
+    )
+    preview = render_preview(video2, players, cal, tmp_path / "p.avi", seconds=1, ball=ball)
+    assert preview.exists()

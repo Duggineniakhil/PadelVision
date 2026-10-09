@@ -77,6 +77,23 @@ def _cmd_label_ball(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_ball_track(args: argparse.Namespace) -> int:
+    from padelvision.run import ball_track
+
+    ball_track(
+        args.video, args.run, max_frames=args.max_frames, imgsz=args.imgsz,
+        device=args.device, force=args.force,
+    )  # fmt: skip
+    return 0
+
+
+def _cmd_ball_retrack(args: argparse.Namespace) -> int:
+    from padelvision.run import ball_retrack
+
+    ball_retrack(args.run)
+    return 0
+
+
 def _cmd_render(args: argparse.Namespace) -> int:
     from pathlib import Path
 
@@ -86,6 +103,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
     from padelvision.render import render_preview
 
     run_dir = Path(args.run)
+    ball_path = run_dir / "ball.parquet"
     out = render_preview(
         args.video,
         pd.read_parquet(run_dir / "players.parquet"),
@@ -93,6 +111,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
         args.out or run_dir / "preview.mp4",
         start_s=args.start,
         seconds=args.seconds,
+        ball=pd.read_parquet(ball_path) if ball_path.exists() else None,
     )
     print(out)
     return 0
@@ -150,6 +169,19 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("label-ball", help="label a ball review pack (local, GUI)")
     p.add_argument("pack", help="review pack folder with pack.json")
     p.set_defaults(func=_cmd_label_ball)
+
+    p = sub.add_parser("ball-track", help="stage 4: detect + track the ball in play (GPU)")
+    p.add_argument("video")
+    p.add_argument("--run", required=True, help="run folder (its court.json enables the ROI)")
+    p.add_argument("--max-frames", type=int, default=None)
+    p.add_argument("--imgsz", type=int, default=1280)
+    p.add_argument("--device", default=None)
+    p.add_argument("--force", action="store_true", help="recompute cached ball detections")
+    p.set_defaults(func=_cmd_ball_track)
+
+    p = sub.add_parser("ball-retrack", help="redo ball tracking from cached detections (local)")
+    p.add_argument("run")
+    p.set_defaults(func=_cmd_ball_retrack)
 
     p = sub.add_parser("render", help="annotated preview video from a run folder")
     p.add_argument("video")

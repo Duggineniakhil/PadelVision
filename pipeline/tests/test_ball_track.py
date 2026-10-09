@@ -44,7 +44,7 @@ def test_long_gaps_are_not_filled_and_tracklets_break():
 
 
 def test_short_gap_limit():
-    gap = MAX_INTERP_GAP + 2  # too long to fill, short enough to stay one tracklet? no: >MAX_MISSES
+    gap = MAX_INTERP_GAP + 2  # longer than MAX_MISSES too: two tracklets, nothing filled between
     rows = _flight(0, 10, 100, 300, 6, 0, g=0) + _flight(
         10 + gap, 10, 100 + 6 * (10 + gap), 300, 6, 0, g=0
     )

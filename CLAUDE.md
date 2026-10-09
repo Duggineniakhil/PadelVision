@@ -23,7 +23,10 @@ Roboflow `padel-ball-detection-nazbq/4` F1 0.68 > COCO sports ball 0.60 > others
 too costly per frame, so we train our own: `04_train_ball.ipynb` + `ball/dataset.py` fine-tune YOLO11s on our
 pseudo-labels (`ml/datasets/Test_video_ball_pseudo.csv`) plus Universe datasets downloaded inside Kaggle.
 Train/test split: 20 s blocks (odd blocks = test, 2 s margin) to avoid near-duplicate leakage. The session has
-several balls on court (spares, balls in hand), so the tracker must pick the ball in play (motion). `web/` and `api/` don't exist yet. Don't invent commands
+several balls on court (spares, balls in hand), so the tracker must pick the ball in play (motion).
+Result: the trained `ball-detector` (manifest; GitHub release `ball-yolo11s-v1`; card in
+`docs/models/padel_ball_yolo11s.md`) scores F1 0.79 on held-out blocks (conf >= 0.10). Next is stage 4:
+ball tracking (detector + motion consistency) on Kaggle. `web/` and `api/` don't exist yet. Don't invent commands
 for tooling that hasn't been set up; add them here once they exist.
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),

@@ -26,4 +26,13 @@ models:
     source: Ultralytics YOLO11, COCO-pretrained (class 0 = person)
     notes: Smaller/faster; for quick CPU checks on short clips.
 
-  # ball-detector: added in phase 2 after fine-tuning on Kaggle.
+  ball-detector:
+    file: padel_ball_yolo11s.pt
+    url: https://github.com/Duggineniakhil/PadelVision/releases/download/ball-yolo11s-v1/padel_ball_yolo11s.pt
+    sha256: 112bfdeaecc51a4074d9d3ee823cd856c829f80d7931ddb661b4fb1ef4dd2e5d
+    task: detect
+    license: AGPL-3.0 (weights); training data CC BY 4.0 (Roboflow Universe, see model card)
+    source: YOLO11s fine-tuned on padel balls (ml/notebooks/04_train_ball.ipynb), docs/models/padel_ball_yolo11s.md
+    notes: >-
+      One class (0 = ball), imgsz 1280, use conf >= 0.10. Held-out Test_video blocks (68 frames):
+      F1 0.79 (recall 0.72, precision 0.88) vs Roboflow nazbq 0.65, COCO sports ball 0.52.

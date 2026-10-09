@@ -4,7 +4,8 @@ One-class ("ball") YOLO11s detector for padel footage, fine-tuned from the COCO-
 `yolo11s.pt`. It was trained with `ml/notebooks/04_train_ball.ipynb` on Kaggle (2× T4, 60 epochs,
 imgsz 1280, batch 8). It's built for the developer's low, wide-angle baseline camera, where the ball is ~5–30 px.
 
-- File: `padel_ball_yolo11s.pt` (19.3 MB)
+- File: `padel_ball_yolo11s.pt` (19.3 MB), published as GitHub release `ball-yolo11s-v1`;
+  `models/manifest.yaml` entry `ball-detector` (`python scripts/fetch_models.py ball-detector`)
 - sha256: `112bfdeaecc51a4074d9d3ee823cd856c829f80d7931ddb661b4fb1ef4dd2e5d`
 - Licence: AGPL-3.0 (Ultralytics YOLO11). Training data credits are below.
 - Recommended confidence threshold: **0.10**. The model's confidences are low; the median detection is about 0.1.

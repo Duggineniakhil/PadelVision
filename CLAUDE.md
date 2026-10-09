@@ -25,8 +25,11 @@ pseudo-labels (`ml/datasets/Test_video_ball_pseudo.csv`) plus Universe datasets 
 Train/test split: 20 s blocks (odd blocks = test, 2 s margin) to avoid near-duplicate leakage. The session has
 several balls on court (spares, balls in hand), so the tracker must pick the ball in play (motion).
 Result: the trained `ball-detector` (manifest; GitHub release `ball-yolo11s-v1`; card in
-`docs/models/padel_ball_yolo11s.md`) scores F1 0.79 on held-out blocks (conf >= 0.10). Next is stage 4:
-ball tracking (detector + motion consistency) on Kaggle. `web/` and `api/` don't exist yet. Don't invent commands
+`docs/models/padel_ball_yolo11s.md`) scores F1 0.79 on held-out blocks (conf >= 0.10).
+Stage 4 (`ball/track.py`, notebook 05) is done: on Test_video the ball in play is found on 55-57% of frames,
+98% of reviewed tracked positions are real balls, and 75% of motion-found moving balls are tracked within 10 px.
+When two balls move at once it can follow the wrong (real) ball: rally context in phase 3 should fix that.
+Next is phase 3 (hits, bounces, rallies). `web/` and `api/` don't exist yet. Don't invent commands
 for tooling that hasn't been set up; add them here once they exist.
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),

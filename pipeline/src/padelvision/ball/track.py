@@ -25,7 +25,7 @@ FIRST_STEP_MAX_PX = 80.0  # fastest plausible move between two frames (smash at 
 GATE_PX = 25.0  # allowed deviation from the constant-velocity prediction
 GATE_PER_SPEED = 0.5  # extra deviation per px/frame of speed
 MAX_MISSES = 4  # frames a tracklet may go undetected and still continue
-MIN_DETECTIONS = 4
+MIN_DETECTIONS = 3  # 3 vs 4: +2% coverage at the same precision on Test_video
 STATIC_SPEED_PX = 1.5  # median px/frame below this = a resting ball or a fixed false spot
 MIN_IN_ROI = 0.5  # fraction of a tracklet's points that must lie in the court region
 MAX_INTERP_GAP = 5  # frames

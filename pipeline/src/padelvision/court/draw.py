@@ -9,6 +9,7 @@ from padelvision.court.calibration import CourtCalibration
 from padelvision.court.geometry import COURT_KEYPOINTS, COURT_LENGTH_M, COURT_LINES, COURT_WIDTH_M
 
 TEAM_COLORS = {"near": (80, 200, 80), "far": (60, 140, 255)}  # BGR
+ROUNDTRIP_TOL_M = 0.25
 
 
 def draw_court_overlay(
@@ -19,9 +20,16 @@ def draw_court_overlay(
     h, w = frame.shape[:2]
     for (x0, y0), (x1, y1) in COURT_LINES:
         t = np.linspace(0, 1, 120)[:, None]
-        pts = cal.to_image(np.c_[x0 + (x1 - x0) * t, y0 + (y1 - y0) * t])
-        # Draw only parts that project sensibly (not behind the camera / outside the lens).
+        court = np.c_[x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]
+        pts = cal.to_image(court)
+        # Draw only parts that project sensibly: not behind the camera, inside the lens model's
+        # valid range, and mapping back to the same court point (out-of-view parts of strongly
+        # distorted lenses can land at bogus image positions).
         ok = np.isfinite(pts).all(axis=1) & (np.abs(pts - [w / 2, h / 2]) < [w, h]).all(axis=1)
+        if ok.any():
+            back = np.full_like(court, np.nan)
+            back[ok] = cal.to_court(pts[ok])
+            ok &= np.linalg.norm(back - court, axis=1) < ROUNDTRIP_TOL_M
         for run in np.split(np.arange(len(pts)), np.nonzero(np.diff(ok.astype(int)))[0] + 1):
             if ok[run[0]] and len(run) > 1:
                 seg = pts[run].round().astype(np.int32)

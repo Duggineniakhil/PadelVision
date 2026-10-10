@@ -35,7 +35,9 @@ detector below target, hit/bounce recall unmeasured (needs human `label-events` 
   shots). Rally stats live there, not in stats.json (`restats` rewrites that). `render` draws hits, bounces and a
   rally banner. Test_video: 4 rallies, 18 rally hits (visual review: 17 real, 1 unclear), median shot ~48 km/h.
 - Videos: `render` (preview) and `highlights` (`highlights.py`: rallies ranked by hits + length + fastest
-  measured shot, cut and joined, title card per clip; `--mode all` = condensed match; writes highlights.json /
+  measured shot, cut and joined, title card per clip, ball trail, and after each clip a 3 s summary card from
+  `visuals.rally_card`: per-player heatmaps of that rally + shot map = hitter's feet -> landing bounce, the
+  flight itself is not drawn; `--mode all` = condensed match; writes highlights.json /
   condensed.json) both draw the stats overlay (`overlay.py` StatsHud: per player running distance, current
   speed, hits; current rally and last measured shot estimate; "n/a" when stats.json has insufficient data).
   No model involved. Rally stats also give per-player max/median shot speed estimates and per-rally summaries.

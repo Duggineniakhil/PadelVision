@@ -55,7 +55,8 @@ def rally_stats(
         "placement": _placement(shots),
         "shot_speed_estimate": _speeds(shots),
         "per_rally": _per_rally(shots, rallies),
-        # every rally hit, for overlays: frame, player, team, landing bounce, speed estimate
+        # every rally hit, for overlays: frame, player, team, hitter's feet (ground, m),
+        # landing bounce, speed estimate
         "shots": shots,
     }
 
@@ -83,13 +84,14 @@ def _shots(ev: pd.DataFrame, rallies: list[dict], players: pd.DataFrame, fps: fl
             if e.kind == "bounce" and e.in_court in (True,) and (e.y_m > 0) == (h.team == "near"):
                 landing = e
                 break
+        xy = _feet_at(feet_by_player.get(h.player), int(h.frame), FEET_MAX_DT_S * fps)
         shot = {"frame": int(h.frame), "player": int(h.player), "team": h.team,
+                "hitter_xy": None if xy is None else [round(xy[0], 2), round(xy[1], 2)],
                 "bounce": None, "speed_kmh": None}  # fmt: skip
         if landing is not None:
             shot["bounce"] = {"frame": int(landing.frame), "x_m": round(float(landing.x_m), 2),
                               "y_m": round(float(landing.y_m), 2),
                               "zone": zone_of(landing.y_m)}  # fmt: skip
-            xy = _feet_at(feet_by_player.get(h.player), int(h.frame), FEET_MAX_DT_S * fps)
             if xy is not None:
                 dist = float(np.hypot(landing.x_m - xy[0], landing.y_m - xy[1]))
                 kmh = dist / ((landing.frame - h.frame) / fps) * 3.6

@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 from test_run import _blank_video
 
-from padelvision.highlights import render_highlights, select_clips, title_lines
+from padelvision.highlights import CARD_S, render_highlights, select_clips, title_lines
 from padelvision.overlay import StatsHud
+from padelvision.visuals import rally_card
 
 FPS = 30.0
 
@@ -67,3 +68,22 @@ def test_render_highlights_writes_only_the_clips(tmp_path):
     n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
     assert n == 20 + 30
+
+
+def test_summary_cards_follow_each_clip(tmp_path):
+    video = tmp_path / "match.avi"
+    _blank_video(video, frames=120)
+    rally = {"id": 1, "start_frame": 10, "end_frame": 29, "duration_s": 0.6, "hits": 2}
+    shots = [{"frame": 12, "player": 1, "team": "near", "hitter_xy": [0.0, -8.0],
+              "bounce": {"x_m": 1.0, "y_m": 7.0}, "speed_kmh": 54.0},
+             {"frame": 20, "player": 3, "team": "far", "hitter_xy": None, "bounce": None,
+              "speed_kmh": None}]  # fmt: skip
+    card = rally_card(rally, _tracks(), shots, FPS, (64, 48))  # tiny: resized to the video
+    assert card.shape == (48, 64, 3)
+    clips = [{"rally_id": 1, "start_frame": 10, "end_frame": 29, "duration_s": 0.6, "hits": 2,
+              "max_shot_kmh": 54.0}]  # fmt: skip
+    out = render_highlights(video, tmp_path / "h.avi", clips, cards={1: card})
+    cap = cv2.VideoCapture(str(out))
+    n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    assert n == 20 + round(CARD_S * FPS)

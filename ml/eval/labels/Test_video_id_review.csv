@@ -1,0 +1,13 @@
+slot,frame_before,frame_after,tracker_ids_after,verdict,note
+1,991,997,"[578, 747]",same_person,"tracker id flicker, same player"
+1,1391,1434,[1041],same_person,P1 walks out of the right image edge and back
+1,1926,1968,[1484],same_person,"P1 at the right image edge, re-enters"
+1,2014,2033,"[1527, 1529, 1540]",same_person,"same player, partly out of frame"
+2,43,96,[94],same_person,same player (window start; first frame not in pack)
+2,3180,3181,[2533],same_person,same player at the net
+2,4238,4239,[3082],same_person,same player (close-up)
+3,319,322,"[3, 260]",same_person,"far player occluded by P1, same player"
+3,677,678,[559],same_person,same player
+4,1042,1043,[799],same_person,same player
+4,2132,2154,"[1636, 1655]",same_person,same player
+4,3595,3608,[2711],same_person,same far player after a 13-frame gap

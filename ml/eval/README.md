@@ -40,15 +40,20 @@ visually on full-resolution crop strips (-0.2 s .. +0.2 s) by Claude, not by a h
 bounce | none | duplicate (a second turn of the same contact) | unclear. It measures precision and hit
 attribution only: events the pipeline missed entirely are not in it, so it says nothing about recall.
 
-## Player identities (phase 1): no labels yet
-ID switches have not been measured. A labelled set would be player boxes with consistent ids 1-4
-(1-2 near, 3-4 far) every 10th frame.
+## Player identities (phase 1): visual review
+Ids are side slots (1-2 near, 3-4 far), not specific people across changeovers. An ID switch is a slot moving to a
+different person during play. `labels/Test_video_id_review.csv`: every point inside the event pack's windows
+(94 s, run of 2026-10-10) where a slot changed tracker id or its box jumped (> 0.6 box heights within 3 frames),
+grouped into 12 incidents and checked on before/after frames by Claude (not a human): all 12 were the same person
+picked up again (tracker id flicker, occlusion, walking out of the image edge and back). Boxes of two players
+overlapped in 8 episodes, all near-vs-far (slots are per side, so they can't swap); the two near or two far players
+never overlapped. Not covered: the 112 s outside the windows, and changeovers (by design not tracked).
 
 ## Targets and current results (Test_video)
 | Metric | Target | Current | Phase |
 |---|---|---|---|
 | Court mean keypoint error | < 15 cm | 32 cm (not met) | 1 |
-| Player ID switches | < 2 per minute | not measured | 1 |
+| Player ID switches | < 2 per minute | 0 in 94 s reviewed (visual) | 1 |
 | Ball detector recall / precision (10 px, held-out blocks) | >= 80% / >= 90% | 74% / 85% (not met) | 2 |
 | Ball in play found (stage 4) | | 53% of frames | 2 |
 | Hits inside rallies: precision (visual review) | | 17 of 17 decided | 3 |

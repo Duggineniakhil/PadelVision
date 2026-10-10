@@ -12,10 +12,11 @@ it before starting larger work.
 ## Status
 Phases 0-3 are built; phase 4 (web app) is deferred. Everything is tuned and measured on one video, the
 developer's Test_video (206 s, mostly warm-up and ball handling, 4 short rallies). Current numbers and gaps are
-in `ml/eval/README.md`; open items: court error 32 cm (target < 15 cm), player ID switches unmeasured, ball
+in `ml/eval/README.md`; open items: court error 32 cm (target < 15 cm), ball
 detector below target, hit/bounce recall unmeasured (needs human `label-events` labels), a second video.
 
 - Players (stages 2-3, 6-7): bystander filtering, identity gating and Kalman smoothing tuned on real detections.
+  Visual ID check (94 s): 0 switches; all 12 tracker-id changes were the same person picked up again.
 - Ball detector: own YOLO11s (`ball-detector` in the manifest, GitHub release `ball-yolo11s-v1`, card
   `docs/models/padel_ball_yolo11s.md`), fine-tuned on Test_video pseudo-labels + Roboflow Universe data
   (`04_train_ball.ipynb`, `ball/dataset.py`); held-out 20 s blocks: recall 0.74, precision 0.85 (conf >= 0.10).

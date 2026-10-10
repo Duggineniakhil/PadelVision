@@ -234,7 +234,7 @@ def events(run_dir: str | Path) -> dict:
         "rallies": rallies,
         # ball activity without an exchange (handling, warm-up, or no hit seen): not rallies
         "other_activity": [s for s in segments if not s["exchange"]],
-        "stats": rally_stats(ev, rallies, players, fps),
+        "stats": rally_stats(ev, rallies, players, fps, cal, ball),
     }
     (out / "rallies.json").write_text(json.dumps(summary, indent=2))
     save_placement_map(summary["stats"], out / "placement.png")

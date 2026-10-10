@@ -85,3 +85,29 @@ def test_placement_map_and_preview_with_events(tmp_path, cal):
     out = render_preview(video, players, cal, tmp_path / "p.avi", seconds=2, events=ev,
                          rallies=rallies)  # fmt: skip
     assert out.exists()
+
+
+def test_only_trustworthy_shots_get_a_speed_with_a_range(cal):
+    from conftest import project
+
+    def shot(f, flight_frames, landing_xy, source="within", px=None):
+        u, v = px if px is not None else project([landing_xy])[0]
+        hit = (f, "hit", 500, 600, np.nan, np.nan, None, 1, "near", "within")
+        bounce = (f + flight_frames, "bounce", u, v, *landing_xy, True, np.nan, None, source)
+        return [hit, bounce]
+
+    rows = shot(0, 30, (0.0, 7.0))  # 15 m in 1 s: kept
+    rows += shot(100, 30, (0.0, 7.0), source="junction")  # bounce at a track join
+    rows += shot(200, 30, (0.0, 7.0), px=(640.0, 715.0))  # landing at the image edge
+    rows += shot(300, 12, (0.0, 2.0))  # 0.4 s flight
+    ev = pd.DataFrame(rows, columns=[*COLS, "source"])
+    feet = _feet([(f, 1, 0.0, -8.0) for f in (0, 100, 200, 300)])
+    s = rally_stats(ev, [_rally(1, 0, 400, 4)], feet, FPS, cal=cal)
+    out = [(x["speed_kmh"], x["speed_range_kmh"], x["speed_note"]) for x in s["shots"]]
+    kmh, rng, note = out[0]
+    assert kmh == 54.0 and note is None and rng[0] < 54 < rng[1]
+    assert rng[1] - rng[0] <= 0.5 * kmh  # within +-25%
+    assert [o[2] for o in out[1:]] == [
+        "bounce at a join between two ball tracks", "landing at the image edge",
+        "flight under 0.5 s"]  # fmt: skip
+    assert all(o[0] is None for o in out[1:])

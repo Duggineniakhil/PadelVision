@@ -48,7 +48,8 @@ class StatsHud:
         rallies = rallies or {}
         self.rallies = rallies.get("rallies", [])
         shots = rallies.get("stats", {}).get("shots", [])
-        self.hits = pd.DataFrame(shots, columns=["frame", "player", "team", "speed_kmh"])
+        cols = ["frame", "player", "team", "speed_kmh", "speed_range_kmh"]
+        self.hits = pd.DataFrame(shots, columns=cols)
         self.hits = self.hits.sort_values("frame") if len(self.hits) else self.hits
 
     @classmethod
@@ -99,7 +100,10 @@ class StatsHud:
         text = clock + f"RALLY {r['id']}  hits {len(h)}"
         measured = h[h.speed_kmh.notna()]
         if len(measured):
-            text += f"  last shot ~{measured.speed_kmh.iloc[-1]:.0f} km/h est."
+            last = measured.iloc[-1]
+            rng = last.speed_range_kmh
+            span = f" ({rng[0]}-{rng[1]})" if isinstance(rng, list | tuple) else ""
+            text += f"  last shot ~{last.speed_kmh:.0f}{span} km/h est."
         return text
 
     def player_line(self, player: int, frame: int) -> str:

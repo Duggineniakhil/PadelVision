@@ -31,9 +31,13 @@ detector below target, hit/bounce recall unmeasured (needs human `label-events` 
   Activity splits at ball pauses > 2 s and > 4 s without a hit, trimmed to the hits; a rally needs an exchange
   (both teams hit, or a hit then an in-court bounce on the other side). `rallies.json` holds rallies,
   `other_activity` and `stats` (`analytics/rallies.py`: counts, hits per player/team, placement ->
-  `placement.png`, shot speed ESTIMATE = hitter's feet -> landing bounce / time, a lower bound, null below 3
-  shots). Rally stats live there, not in stats.json (`restats` rewrites that). `render` draws hits, bounces and a
-  rally banner. Test_video: 4 rallies, 18 rally hits (visual review: 17 real, 1 unclear), median shot ~48 km/h.
+  `placement.png`, shot speed ESTIMATE = hitter's feet -> landing bounce / time: the average ground speed, a lower
+  bound for the speed off the racket). A shot only gets a speed if its landing is a bounce tracked through (not a
+  join between ball tracks), not at the image edge, the flight >= 0.5 s and the error range <= +-25%; each speed has
+  `speed_range_kmh` (calibration per zone + 0.7 m feet-to-contact + timing), others a `speed_note`. Summaries need
+  3 shots. Never validated against a radar. Rally stats live there, not in stats.json (`restats` rewrites that).
+  `render` draws hits, bounces and a rally banner. Test_video: 4 rallies, 18 rally hits (visual review: 17 real,
+  1 unclear); 5 shots with a trustworthy speed, 33-56 km/h, each about +-20% (an 80 km/h one was a track join).
 - Videos: `render` (preview) and `highlights` (`highlights.py`: rallies ranked by hits + length + fastest
   measured shot, cut and joined, title card per clip, ball trail, and after each clip a 3 s summary card from
   `visuals.rally_card`: per-player heatmaps of that rally + shot map = hitter's feet -> landing bounce, the

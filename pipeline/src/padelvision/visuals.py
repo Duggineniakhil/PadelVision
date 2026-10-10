@@ -110,6 +110,12 @@ def save_placement_map(stats: dict, path: str | Path) -> None:
 CARD_MIN_TRACKED_S = 1.0  # less tracking than this in a rally: "not enough data"
 
 
+def _speed_label(n: int, shot: dict) -> str:
+    rng = shot.get("speed_range_kmh")
+    span = f" ({rng[0]}-{rng[1]})" if rng else ""
+    return f"#{n} ~{shot['speed_kmh']:.0f}{span} km/h"
+
+
 def rally_card(
     rally: dict, tracks: pd.DataFrame, shots: list[dict], fps: float, size: tuple[int, int]
 ) -> np.ndarray:
@@ -174,7 +180,7 @@ def rally_card(
                 # with its number, so crossing arrows can't be confused.
                 right = b["x_m"] < 0
                 ax.text(b["x_m"] + (0.5 if right else -0.5), b["y_m"],
-                        f"#{n} ~{s['speed_kmh']:.0f} km/h", color=color, fontsize=8,
+                        _speed_label(n, s), color=color, fontsize=8,
                         fontweight="bold", ha="left" if right else "right", va="center",
                         bbox={"facecolor": "#0f172a", "edgecolor": "none", "alpha": 0.75,
                               "pad": 1.5}, zorder=6)  # fmt: skip

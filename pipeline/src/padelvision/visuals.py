@@ -170,9 +170,14 @@ def rally_card(
                         arrowprops={"arrowstyle": "->", "color": color, "lw": 2})  # fmt: skip
             ax.scatter([b["x_m"]], [b["y_m"]], s=30, color=color, edgecolors="white", zorder=3)
             if s.get("speed_kmh") is not None:
-                mid = ((start[0] + b["x_m"]) / 2, (start[1] + b["y_m"]) / 2)
-                ax.text(*mid, f"~{s['speed_kmh']:.0f}", color="white", fontsize=8,
-                        ha="center", va="center")  # fmt: skip
+                # Next to its own landing point (towards the middle), in the shot's colour and
+                # with its number, so crossing arrows can't be confused.
+                right = b["x_m"] < 0
+                ax.text(b["x_m"] + (0.5 if right else -0.5), b["y_m"],
+                        f"#{n} ~{s['speed_kmh']:.0f} km/h", color=color, fontsize=8,
+                        fontweight="bold", ha="left" if right else "right", va="center",
+                        bbox={"facecolor": "#0f172a", "edgecolor": "none", "alpha": 0.75,
+                              "pad": 1.5}, zorder=6)  # fmt: skip
         if start is not None:
             ax.scatter([start[0]], [start[1]], s=110, color=color, edgecolors="white", zorder=4)
             ax.text(start[0], start[1], str(n), color="black", fontsize=8, ha="center",

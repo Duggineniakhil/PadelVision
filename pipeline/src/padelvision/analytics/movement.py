@@ -117,6 +117,22 @@ def _player_metrics(tr: pd.DataFrame, dt: float) -> dict:
     }
 
 
+def running_distance(tracks: pd.DataFrame, fps: float, stride: int = 1) -> dict[int, pd.Series]:
+    """Per player: distance covered up to each tracked frame (m), with the same step rules as
+    `movement_stats` (no steps across segment gaps, implausibly fast steps dropped), so the
+    last value equals stats.json's distance_m."""
+    dt = stride / fps
+    out = {}
+    for player, tr in tracks.sort_values("frame").groupby("player"):
+        parts = []
+        for _, s in tr.groupby("segment", sort=False):
+            step = np.r_[0.0, np.hypot(np.diff(s.x), np.diff(s.y))]
+            step[step > MAX_SPEED_MPS * dt] = 0.0
+            parts.append(pd.Series(step, index=s.frame.to_numpy()))
+        out[int(player)] = pd.concat(parts).sort_index().cumsum()
+    return out
+
+
 def _count_runs(mask: np.ndarray, min_len: int) -> int:
     runs, n = 0, 0
     for m in mask:

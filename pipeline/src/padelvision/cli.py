@@ -140,6 +140,13 @@ def _cmd_events_eval(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_highlights(args: argparse.Namespace) -> int:
+    from padelvision.highlights import highlights
+
+    highlights(args.video, args.run, args.out, args.mode, args.top)
+    return 0
+
+
 def _cmd_render(args: argparse.Namespace) -> int:
     import json
     from pathlib import Path
@@ -147,6 +154,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
     import pandas as pd
 
     from padelvision.court.calibration import CourtCalibration
+    from padelvision.overlay import StatsHud
     from padelvision.render import render_preview
 
     run_dir = Path(args.run)
@@ -162,6 +170,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
         ball=pd.read_parquet(ball_path) if ball_path.exists() else None,
         events=pd.read_parquet(events_path) if events_path.exists() else None,
         rallies=json.loads(rallies_path.read_text())["rallies"] if rallies_path.exists() else None,
+        hud=None if args.no_hud else StatsHud.from_run(run_dir),
     )
     print(out)
     return 0
@@ -261,7 +270,21 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default=None)
     p.add_argument("--start", type=float, default=0.0, help="start time (s)")
     p.add_argument("--seconds", type=float, default=30.0)
+    p.add_argument("--no-hud", action="store_true", help="without the stats overlay")
     p.set_defaults(func=_cmd_render)
+
+    p = sub.add_parser("highlights", help="cut the best rallies (or all) into one video")
+    p.add_argument("video")
+    p.add_argument("--run", required=True, help="run folder with rallies.json (stage 5)")
+    p.add_argument("--out", default=None, help="default: <run>/highlights.mp4 or condensed.mp4")
+    p.add_argument(
+        "--mode",
+        choices=["top", "all"],
+        default="top",
+        help="top: the best rallies; all: every rally (condensed match)",
+    )
+    p.add_argument("--top", type=int, default=5, help="number of rallies in top mode")
+    p.set_defaults(func=_cmd_highlights)
 
     args = parser.parse_args(argv)
     return args.func(args)

@@ -34,6 +34,11 @@ detector below target, hit/bounce recall unmeasured (needs human `label-events` 
   `placement.png`, shot speed ESTIMATE = hitter's feet -> landing bounce / time, a lower bound, null below 3
   shots). Rally stats live there, not in stats.json (`restats` rewrites that). `render` draws hits, bounces and a
   rally banner. Test_video: 4 rallies, 18 rally hits (visual review: 17 real, 1 unclear), median shot ~48 km/h.
+- Videos: `render` (preview) and `highlights` (`highlights.py`: rallies ranked by hits + length + fastest
+  measured shot, cut and joined, title card per clip; `--mode all` = condensed match; writes highlights.json /
+  condensed.json) both draw the stats overlay (`overlay.py` StatsHud: per player running distance, current
+  speed, hits; current rally and last measured shot estimate; "n/a" when stats.json has insufficient data).
+  No model involved. Rally stats also give per-player max/median shot speed estimates and per-rally summaries.
 - Eval tooling: `event-review-pack` (Kaggle) -> `label-events` (local GUI) -> `events-eval`.
 
 `web/` and `api/` don't exist yet. Don't invent commands for tooling that hasn't been set up; add them here
@@ -70,7 +75,8 @@ from short far lines overfits). With it, far players near the far baseline are n
 .venv/Scripts/padelvision calibrate data/court_frame.png -o data/court.json   # local GUI
 # Kaggle/Colab only (needs GPU + [ml]):
 padelvision analyze <video> --court court.json --out runs/match1 [--stride 2] [--max-frames 900]
-padelvision render <video> --run runs/match1 --start 0 --seconds 30
+padelvision render <video> --run runs/match1 --start 0 --seconds 30   # + stats overlay (--no-hud to drop it)
+padelvision highlights <video> --run runs/match1 [--mode top|all] [--top 5]   # best rallies / condensed match
 padelvision ball-bootstrap <video> --run runs/match1          # classical candidates + pseudo-labels
 padelvision ball-review-pack <video> --run runs/match1 --out ball_review
 padelvision ball-track <video> --run runs/match1               # stage 4: ball in play (ml/notebooks/05)

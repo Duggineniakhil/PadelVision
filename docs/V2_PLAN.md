@@ -144,6 +144,8 @@ Code loads models only through `padelvision.models.registry.load(name)`.
 
 **Phase 5 — Extras (pick any)**
 - Automatic court keypoints, shot types, highlights, TrackNet ball model, HF Space demo.
+- *Built:* highlights (best rallies or a condensed match, from the detected rallies, no model) and a stats
+  overlay on the preview and highlight videos.
 
 ## 7. Evaluation
 - `ml/eval/` scripts measure court error, ID switches, ball precision/recall and event F1.

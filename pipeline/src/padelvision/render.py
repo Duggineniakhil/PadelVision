@@ -9,6 +9,7 @@ import pandas as pd
 
 from padelvision.court.calibration import CourtCalibration
 from padelvision.court.draw import TEAM_COLORS, MiniCourt, draw_court_overlay
+from padelvision.overlay import StatsHud
 
 
 def render_preview(
@@ -21,6 +22,7 @@ def render_preview(
     ball: pd.DataFrame | None = None,
     events: pd.DataFrame | None = None,
     rallies: list[dict] | None = None,
+    hud: StatsHud | None = None,
 ) -> Path:
     cap = cv2.VideoCapture(str(video_path))
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -74,16 +76,19 @@ def render_preview(
             _draw_rally(img, rallies or [], shown, frame)
             mh, mw = canvas.shape[:2]
             img[10 : 10 + mh, w - mw - 10 : w - 10] = canvas
-            cv2.putText(
-                img,
-                f"{frame / fps:7.2f}s",
-                (10, h - 12),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (255, 255, 255),
-                2,
-                cv2.LINE_AA,
-            )
+            if hud is not None:
+                hud.draw(img, frame)  # includes the time
+            else:
+                cv2.putText(
+                    img,
+                    f"{frame / fps:7.2f}s",
+                    (10, h - 12),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
             writer.write(img)
     finally:
         cap.release()

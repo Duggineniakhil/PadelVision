@@ -54,6 +54,9 @@ def rally_stats(
         "hits_by_team": {str(k): int(v) for k, v in hits.team.value_counts().items()},
         "placement": _placement(shots),
         "shot_speed_estimate": _speeds(shots),
+        "per_rally": _per_rally(shots, rallies),
+        # every rally hit, for overlays: frame, player, team, landing bounce, speed estimate
+        "shots": shots,
     }
 
 
@@ -139,5 +142,18 @@ def _speeds(shots: list) -> dict:
         "by_player_median_kmh": {
             p: round(float(np.median(x)), 1) for p, x in sorted(by_player.items())
         },
+        "by_player_max_kmh": {p: round(float(max(x)), 1) for p, x in sorted(by_player.items())},
+        "by_player_samples": {p: len(x) for p, x in sorted(by_player.items())},
         "note": note,
     }
+
+
+def _per_rally(shots: list, rallies: list[dict]) -> list[dict]:
+    """Per rally: hits, measured shots and the fastest shot estimate (null if none measured)."""
+    out = []
+    for r in rallies:
+        mine = [s for s in shots if r["start_frame"] <= s["frame"] <= r["end_frame"]]
+        v = [s["speed_kmh"] for s in mine if s["speed_kmh"] is not None]
+        out.append({"id": r["id"], "hits": len(mine), "measured_shots": len(v),
+                    "max_shot_kmh": max(v) if v else None})  # fmt: skip
+    return out

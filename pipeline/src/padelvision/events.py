@@ -11,9 +11,11 @@ Events are sharp turns of the ball's image path, found
 
 Each turn is classified:
 - "hit":    the ball is in a player's reach zone (box widened for arm + racket) AND its size
-            fits that player's depth: a 6.5 cm ball next to a ~1.75 m person is ~1/27 of the
-            box height. With a low camera, a far-court ball often appears inside a near
-            player's (large) box; it is 2-3x too small to be at their racket.
+            fits that player's depth. With a low camera, a far-court ball often appears inside a
+            near player's (large) box; it is about half the size a ball at their racket would be.
+            Expected size = a + b * player box height (the detector's boxes have a floor of ~7 px
+            from blur/padding, so a pure ratio doesn't work). When several players are in reach,
+            the best depth match gets the hit.
 - "bounce": the ball was moving down the image and then up (floor bounce)
 - "wall":   any other sharp turn (glass rebounds, net cord, a hit we can't attribute)
 
@@ -38,8 +40,11 @@ JUNCTION_MAX_DIST_PX = 120.0
 REACH_X = 0.6  # reach zone: box widened by this fraction of its width on each side
 REACH_TOP = 0.35  # and raised by this fraction of its height (overhead racket)
 BOUNCE_COURT_MARGIN_M = 0.5
-BALL_TO_PLAYER = 0.065 / 1.75  # expected ball diameter / player box height at contact
-REACH_DEPTH_FACTOR = 2.0  # allowed ratio error (crouching, blur, box noise)
+# Expected ball box size (px) at a player of box height h: a + b * h. Fitted on 24 visually
+# confirmed hits in Test_video with ball-detector v1 (ratio actual/expected 0.78-1.24); far balls
+# seen inside a near player's box come out at ~0.53. Re-fit for another camera or detector.
+BALL_SIZE_AT_PLAYER = (7.28, 0.0625)
+SIZE_MATCH_TOL = 1.43  # accept actual/expected within [1/1.43, 1.43] = [0.70, 1.43]
 RALLY_GAP_S = 2.0
 MIN_RALLY_S = 1.5
 
@@ -198,11 +203,16 @@ def _reaching_player(boxes: pd.DataFrame | None, u: float, v: float, size: float
         & (v >= boxes.y1 - REACH_TOP * h) & (v <= boxes.y2)
     )  # fmt: skip
     if np.isfinite(size) and size > 0:
-        ratio = size / h.clip(lower=1)
-        inside &= np.abs(np.log(ratio / BALL_TO_PLAYER)) <= np.log(REACH_DEPTH_FACTOR)
-    if not inside.any():
-        return None, None
-    cand = boxes[inside]
-    d = np.hypot((cand.x1 + cand.x2) / 2 - u, (cand.y1 + cand.y2) / 2 - v)
-    best = cand.loc[d.idxmin()]
+        a, b = BALL_SIZE_AT_PLAYER
+        mismatch = np.abs(np.log(size / (a + b * h)))
+        inside &= mismatch <= np.log(SIZE_MATCH_TOL)
+        if not inside.any():
+            return None, None
+        best = boxes.loc[mismatch[inside].idxmin()]  # best depth match
+    else:
+        if not inside.any():
+            return None, None
+        cand = boxes[inside]
+        d = np.hypot((cand.x1 + cand.x2) / 2 - u, (cand.y1 + cand.y2) / 2 - v)
+        best = cand.loc[d.idxmin()]  # no size: nearest box
     return int(best.player), str(best.team)

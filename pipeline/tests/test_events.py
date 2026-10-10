@@ -42,9 +42,9 @@ def test_hit_needs_ball_size_matching_player_depth(cal):
     # Ball comes in and is sent back at (500, 450), inside a near player's large box.
     pts = [(i, 500 + 8 * (i - 6) * (1 if i < 6 else -1), 450 + 6 * (i - 6)) for i in range(13)]
     near_player = _players([(f, 2, "near", 460, 400, 560, 700) for f in range(13)])  # 300 px tall
-    at_racket = detect_events(_ball(pts, size=11.0), near_player, cal, FPS)  # 11/300 ~ 1/27
+    at_racket = detect_events(_ball(pts, size=25.0), near_player, cal, FPS)  # expected ~26 px
     assert list(at_racket.kind) == ["hit"] and at_racket.player.iloc[0] == 2
-    behind = detect_events(_ball(pts, size=4.0), near_player, cal, FPS)  # far ball behind him
+    behind = detect_events(_ball(pts, size=10.0), near_player, cal, FPS)  # far ball behind him
     assert "hit" not in set(behind.kind)
     unknown = detect_events(_ball(pts, size=np.nan), near_player, cal, FPS)  # no size: 2-D only
     assert list(unknown.kind) == ["hit"]
@@ -68,3 +68,12 @@ def test_rallies_split_at_long_pauses(cal):
     rallies = detect_rallies(ball, ev, FPS)
     assert [r["start_frame"] for r in rallies] == [0, 200]  # the 0.7 s burst is too short
     assert rallies[0]["hits"] == 2 and rallies[0]["hits_by_player"] == {"2": 1, "3": 1}
+
+
+def test_best_depth_match_gets_the_hit(cal):
+    # The ball turns where a near player's big box and a far player's small box overlap in 2-D.
+    pts = [(i, 500 + 8 * (i - 6) * (1 if i < 6 else -1), 420 + 4 * (i - 6)) for i in range(13)]
+    boxes = [(f, 2, "near", 440, 380, 560, 700) for f in range(13)]  # 320 px tall
+    boxes += [(f, 4, "far", 480, 390, 520, 450) for f in range(13)]  # 60 px tall
+    ev = detect_events(_ball(pts, size=10.5), _players(boxes), cal, FPS)  # far-ball size
+    assert list(ev.kind) == ["hit"] and ev.player.iloc[0] == 4

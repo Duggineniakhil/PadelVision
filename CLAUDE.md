@@ -35,8 +35,10 @@ Phase 3 (stage 5, `events.py`) in progress: sharp turns of the ball's image path
 tracklet junctions) classified as hit (ball in a player's reach zone AND ball size consistent with that
 player's depth: a low camera puts far balls inside near players' boxes), handling (a "hit" after which the
 ball stays near the player: bouncing it between points; Test_video has long stretches of this), floor bounce
-(down then up the image; gets a court position) or wall. A rally needs an exchange (hits by both teams, or a
-hit then a bounce on the other side); other ball activity goes to `other_activity` in `rallies.json`.
+(down then up the image; gets a court position) or wall. Activity is split at ball-track pauses > 2 s and at
+> 4 s without a hit, then trimmed to 1 s before the first hit / 2 s after the last. A rally needs an exchange
+(hits by both teams, or a hit then an in-court bounce on the other side); the rest goes to `other_activity`
+in `rallies.json`. Test_video: 4 rallies (7.8-12.9 s, 31.7-47.6 s, 67.2-74.0 s, 136.1-141.9 s).
 Ball detections now carry `size` (min box side, px). `web/` and `api/` don't exist yet. Don't invent commands
 for tooling that hasn't been set up; add them here once they exist.
 

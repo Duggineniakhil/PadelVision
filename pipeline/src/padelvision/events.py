@@ -24,10 +24,12 @@ Each turn is classified:
 - "wall":   any other sharp turn (glass rebounds, net cord, a hit we can't attribute)
 
 Only bounces get a court position: the ball is on the ground there, so the homography is
-valid. Ball activity is split into segments at pauses > RALLY_GAP_S. A segment is a rally
-only if it shows an exchange: hits by both teams, or a hit followed by a floor bounce on the
-other side of the net. Other segments (ball handling, warm-up feeding, segments where no
-hit was seen) are reported separately and never counted as rallies.
+valid. Ball activity is split into segments at pauses in the ball track > RALLY_GAP_S, and
+again where no hit is seen for > MAX_HIT_GAP_S (players bouncing the ball between points
+keep it in view). Segments with hits are trimmed to RALLY_LEAD_S before the first hit and
+RALLY_TAIL_S after the last. A segment is a rally only if it shows an exchange: hits by both
+teams, or a hit followed by a floor bounce on the other side of the net. Other segments
+(ball handling, warm-up feeding, no hit seen) are reported separately, never as rallies.
 """
 
 from __future__ import annotations
@@ -59,6 +61,10 @@ LEAVE_REACH = 0.5  # box heights beyond the player's box (sides, top, bottom)
 MIN_SEEN = 1 / 3  # fraction of the window with ball + player box needed to call it handling
 RALLY_GAP_S = 2.0
 MIN_RALLY_S = 1.5
+# Hits in Test_video exchanges are 0.2-2.6 s apart; 4 s still allows one missed hit.
+MAX_HIT_GAP_S = 4.0
+RALLY_LEAD_S = 1.0  # kept before the first hit (serve bounce)
+RALLY_TAIL_S = 2.0  # kept after the last hit (bounces, glass, the ball going dead)
 
 EVENT_COLUMNS = ["frame", "t", "kind", "u", "v", "size", "x_m", "y_m", "in_court", "player",
                  "team", "track", "turn_deg", "speed_in", "speed_out", "source"]  # fmt: skip
@@ -104,11 +110,14 @@ def activity_segments(ball: pd.DataFrame, events: pd.DataFrame, fps: float) -> l
         return []
     frames = ball.frame.to_numpy()
     breaks = np.flatnonzero(np.diff(frames) > RALLY_GAP_S * fps) + 1
-    segments = []
+    spans = []
     for seg in np.split(frames, breaks):
         start, end = int(seg[0]), int(seg[-1])
-        if (end - start) / fps < MIN_RALLY_S:
-            continue
+        if (end - start) / fps >= MIN_RALLY_S:
+            spans += _split_at_hit_gaps(events, start, end, fps)
+    segments = []
+    for start, end in spans:
+        seg = frames[(frames >= start) & (frames <= end)]
         ev = events[(events.frame >= start) & (events.frame <= end)]
         hits = ev[ev.kind == "hit"]
         segments.append({
@@ -132,13 +141,37 @@ def detect_rallies(ball: pd.DataFrame, events: pd.DataFrame, fps: float) -> list
     return [s for s in activity_segments(ball, events, fps) if s["exchange"]]
 
 
+def _split_at_hit_gaps(events: pd.DataFrame, start: int, end: int, fps: float) -> list[tuple]:
+    """(start, end) frame spans: one per group of hits <= MAX_HIT_GAP_S apart, trimmed to the
+    lead/tail around its hits. Without hits, the whole span is kept (as non-rally activity)."""
+    hit_frames = np.sort(
+        events.frame[(events.kind == "hit") & events.frame.between(start, end)].to_numpy()
+    )
+    if not len(hit_frames):
+        return [(start, end)]
+    cuts = np.flatnonzero(np.diff(hit_frames) > MAX_HIT_GAP_S * fps) + 1
+    groups = np.split(hit_frames, cuts)
+    spans = []
+    for i, g in enumerate(groups):
+        s = max(start, int(g[0]) - round(RALLY_LEAD_S * fps))
+        e = min(end, int(g[-1]) + round(RALLY_TAIL_S * fps))
+        if spans:
+            s = max(s, spans[-1][1] + 1)
+        if i + 1 < len(groups):
+            e = min(e, int(groups[i + 1][0]) - 1)
+        spans.append((s, e))
+    return spans
+
+
 def _has_exchange(ev: pd.DataFrame) -> bool:
-    """Hits by both teams, or a hit followed by a floor bounce on the other side of the net
-    (near team = y < 0)."""
+    """Hits by both teams, or a hit followed by an in-court floor bounce on the other side of
+    the net (near team = y < 0)."""
     hits = ev[ev.kind == "hit"]
     if hits.team.nunique() >= 2:
         return True
-    bounces = ev[(ev.kind == "bounce") & ev.y_m.notna()] if "y_m" in ev else ev.iloc[:0]
+    if "in_court" not in ev:
+        return False
+    bounces = ev[(ev.kind == "bounce") & ev.in_court.eq(True)]  # not balls on the next court
     for h in hits.itertuples():
         later = bounces[bounces.frame > h.frame]
         if len(later) and ((later.y_m.iloc[0] > 0) == (h.team == "near")):

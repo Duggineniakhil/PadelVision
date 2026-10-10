@@ -69,8 +69,10 @@ def test_turn_at_tracklet_junction(cal):
 
 
 def _events(rows):
-    """rows: (frame, kind, player, team, y_m)."""
-    return pd.DataFrame(rows, columns=["frame", "kind", "player", "team", "y_m"])
+    """rows: (frame, kind, player, team, y_m); a bounce with y_m is in the court."""
+    ev = pd.DataFrame(rows, columns=["frame", "kind", "player", "team", "y_m"])
+    ev["in_court"] = np.where(ev.y_m.notna(), True, None)
+    return ev
 
 
 def test_activity_splits_at_long_pauses_and_rallies_need_an_exchange(cal):
@@ -92,8 +94,23 @@ def test_hit_then_bounce_on_the_other_side_is_an_exchange(cal):
     ball = _ball([(f, 100 + f % 50, 300) for f in range(120)])
     over = _events([(30, "hit", 1, "near", np.nan), (50, "bounce", None, None, 4.0)])
     same_side = _events([(30, "hit", 1, "near", np.nan), (50, "bounce", None, None, -4.0)])
+    next_court = over.assign(in_court=[None, False])  # a ball bouncing on the next court
     assert len(detect_rallies(ball, over, FPS)) == 1
     assert detect_rallies(ball, same_side, FPS) == []
+    assert detect_rallies(ball, next_court, FPS) == []
+
+
+def test_activity_splits_where_no_hit_is_seen_and_trims_to_the_hits(cal):
+    # 20 s of ball in view: a player bounces the ball, then a real exchange from 15 s to 17 s.
+    ball = _ball([(f, 100 + f % 50, 300) for f in range(600)])
+    ev = _events([
+        (60, "hit", 2, "near", np.nan), (120, "hit", 2, "near", np.nan),  # alone, 2 s apart
+        (450, "hit", 2, "near", np.nan), (490, "hit", 4, "far", np.nan),
+        (510, "hit", 1, "near", np.nan),
+    ])  # fmt: skip
+    segments = activity_segments(ball, ev, FPS)
+    spans = [(s["start_frame"], s["end_frame"], s["exchange"]) for s in segments]
+    assert spans == [(30, 180, False), (420, 570, True)]  # 1 s lead, 2 s tail
 
 
 def test_ball_handling_is_not_a_hit(cal):

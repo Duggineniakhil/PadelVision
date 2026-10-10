@@ -16,10 +16,14 @@ Each turn is classified:
             Expected size = a + b * player box height (the detector's boxes have a floor of ~7 px
             from blur/padding, so a pure ratio doesn't work). When several players are in reach,
             the best depth match gets the hit.
-- "handling": a "hit" after which the ball never leaves the player's surroundings (bouncing
-            the ball on the floor or racket between points, before a serve, picking it up).
-            A real shot sends the ball more than LEAVE_REACH box heights away within
-            HANDLING_WINDOW_S. If the ball is mostly unseen in that window, it stays a hit.
+            A turn at a player within MAX_HIT_GAP_S of the other team's last hit is a return,
+            so always a hit (far shots barely move in the image: depth is compressed).
+            Turns by the same player within DUPLICATE_S are one contact (the ball's turn as
+            it arrives and as it leaves): the one with the fastest outgoing ball is kept.
+- "handling": any other "hit" after which the ball never leaves the player's surroundings
+            (bouncing the ball between points, before a serve, catching it). A real shot sends
+            the ball more than LEAVE_REACH box heights away within HANDLING_WINDOW_S. If the
+            ball is mostly unseen in that window, it stays a hit.
 - "bounce": the ball was moving down the image and then up (floor bounce)
 - "wall":   any other sharp turn (glass rebounds, net cord, a hit we can't attribute)
 
@@ -59,6 +63,8 @@ SIZE_MATCH_TOL = 1.43  # accept actual/expected within [1/1.43, 1.43] = [0.70, 1
 HANDLING_WINDOW_S = 0.6
 LEAVE_REACH = 0.5  # box heights beyond the player's box (sides, top, bottom)
 MIN_SEEN = 1 / 3  # fraction of the window with ball + player box needed to call it handling
+# Visual review of Test_video events: duplicate turns of one contact were 0.2-0.3 s apart.
+DUPLICATE_S = 0.35
 RALLY_GAP_S = 2.0
 MIN_RALLY_S = 1.5
 # Hits in Test_video exchanges are 0.2-2.6 s apart; 4 s still allows one missed hit.
@@ -79,11 +85,18 @@ def detect_events(
     ball_at = dict(zip(ball.frame, zip(ball.u, ball.v, strict=True), strict=True))
     window = max(1, round(HANDLING_WINDOW_S * fps))
     rows = []
+    last: tuple[int, str] | None = None  # (frame, team) of the last hit/handling
     for tr in turns:
         player, team = _reaching_player(boxes.get(tr["frame"]), tr["u"], tr["v"], tr["size"])
         if player is not None:
-            away = _sends_ball_away(ball_at, boxes, player, tr["frame"], window)
+            returned = (
+                last is not None
+                and last[1] != team
+                and tr["frame"] - last[0] <= MAX_HIT_GAP_S * fps
+            )
+            away = returned or _sends_ball_away(ball_at, boxes, player, tr["frame"], window)
             kind = "hit" if away else "handling"
+            last = (tr["frame"], team)
         elif tr["dv_in"] > 0 and tr["dv_out"] < 0:
             kind = "bounce"
         else:
@@ -100,7 +113,30 @@ def detect_events(
             tr["frame"], tr["frame"] / fps, kind, tr["u"], tr["v"], tr["size"], x, y, in_court,
             player, team, tr["track"], tr["turn"], tr["speed_in"], tr["speed_out"], tr["source"],
         ))  # fmt: skip
-    return pd.DataFrame(rows, columns=EVENT_COLUMNS).sort_values("frame").reset_index(drop=True)
+    events = pd.DataFrame(rows, columns=EVENT_COLUMNS).sort_values("frame")
+    return _merge_duplicate_contacts(events.reset_index(drop=True), fps)
+
+
+def _merge_duplicate_contacts(events: pd.DataFrame, fps: float) -> pd.DataFrame:
+    """One row per contact: same-player hit/handling turns within DUPLICATE_S are merged into
+    the one with the fastest outgoing ball (a hit if any of them was)."""
+    contact = events.kind.isin(["hit", "handling"])
+    drop = []
+    group: list[int] = []
+    for i in [*events.index[contact], None]:
+        if group and (
+            i is None
+            or events.player[i] != events.player[group[-1]]
+            or events.frame[i] - events.frame[group[-1]] > DUPLICATE_S * fps
+        ):
+            keep = max(group, key=lambda j: events.speed_out[j])
+            if (events.kind[group] == "hit").any():
+                events.loc[keep, "kind"] = "hit"
+            drop += [j for j in group if j != keep]
+            group = []
+        if i is not None:
+            group.append(i)
+    return events.drop(index=drop).reset_index(drop=True)
 
 
 def activity_segments(ball: pd.DataFrame, events: pd.DataFrame, fps: float) -> list[dict]:

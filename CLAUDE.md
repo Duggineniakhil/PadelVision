@@ -38,7 +38,11 @@ ball stays near the player: bouncing it between points; Test_video has long stre
 (down then up the image; gets a court position) or wall. Activity is split at ball-track pauses > 2 s and at
 > 4 s without a hit, then trimmed to 1 s before the first hit / 2 s after the last. A rally needs an exchange
 (hits by both teams, or a hit then an in-court bounce on the other side); the rest goes to `other_activity`
-in `rallies.json`. Test_video: 4 rallies (7.8-12.9 s, 31.7-47.6 s, 67.2-74.0 s, 136.1-141.9 s).
+in `rallies.json`. A turn right after the other team's hit is a return (always a hit: far shots barely move in
+the image), and same-player turns within 0.35 s are one contact. Visual precision check of the predicted events
+(`ml/eval/labels/Test_video_events_reviewed.csv`, precision only): hits inside rallies 17/17 real (+1 unclear);
+the remaining false hits are ball tapping outside rallies; bounces 9/11 decided; walls ~0/6 (unreliable).
+Recall still needs human `label-events` labels. Test_video: 4 rallies (8.0-12.9, 31.7-48.4, 67.2-74.0, 136.3-141.9 s).
 Ball detections now carry `size` (min box side, px). `web/` and `api/` don't exist yet. Don't invent commands
 for tooling that hasn't been set up; add them here once they exist.
 

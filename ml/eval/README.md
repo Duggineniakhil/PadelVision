@@ -32,6 +32,13 @@ Made with `padelvision label-events` on a pack from `event-review-pack` (noteboo
 - A hit is a real shot (serves included). Bouncing the ball between points or tapping it to a partner is not.
 - Hit `player` is the slot id 1-4 (1-2 near, 3-4 far), as in `players.parquet`.
 
+### Reviewed predicted events (precision only)
+`Test_video_events_reviewed.csv`: frame, predicted, truth, player, note. Every hit / handling / bounce / wall the
+pipeline predicted inside the event pack's windows (run of 2026-10-10), checked visually on full-resolution crop strips
+(-0.2 s .. +0.2 s) by Claude, not by a human. truth = hit | handling | bounce | none | duplicate (a second turn of the
+same contact) | unclear. It measures precision and hit attribution only: events the pipeline missed entirely are
+not in it, so it says nothing about recall. Use the exhaustive `label-events` labels for that.
+
 ## Metrics (scripts arrive with each phase)
 | Metric | Target | Phase |
 |---|---|---|

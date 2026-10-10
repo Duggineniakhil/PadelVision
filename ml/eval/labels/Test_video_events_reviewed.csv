@@ -1,0 +1,60 @@
+frame,predicted,truth,player,note
+103,hit,hit,3,
+264,hit,duplicate,4,same contact as f271
+271,hit,hit,4,
+290,handling,hit,1,deep shot toward far court
+299,handling,duplicate,1,same contact as f290
+328,hit,hit,1,
+672,hit,hit,3,overhead
+982,hit,hit,2,
+1035,handling,hit,4,overhead
+1100,hit,hit,1,
+1144,hit,hit,4,
+1169,hit,hit,2,
+1241,hit,hit,1,ball hidden at contact
+1319,hit,unclear,,
+1367,hit,hit,1,smash
+1391,handling,hit,4,volley at the net
+1854,handling,hit,4,
+1898,hit,unclear,,swing ~0.2 s later
+2046,hit,hit,4,
+2101,hit,hit,2,
+2159,hit,hit,4,overhead
+3392,hit,handling,2,tapping the ball
+3494,hit,handling,2,pushing the ball aside
+3547,handling,handling,2,
+3558,handling,handling,2,
+3566,hit,handling,2,
+3833,handling,handling,2,catch
+3853,handling,handling,2,ball in hand
+3860,handling,handling,2,ball in hand
+4103,handling,handling,2,
+4112,hit,duplicate,2,same contact as f4119
+4119,hit,hit,2,
+4159,hit,hit,4,
+4198,hit,hit,2,
+5536,hit,handling,2,
+5583,handling,handling,2,
+5612,handling,handling,2,
+5841,handling,handling,2,
+5879,handling,handling,2,
+5894,hit,handling,2,hand toss
+242,bounce,bounce,,far side near the net
+343,bounce,bounce,,
+639,bounce,none,,on the back fence
+696,bounce,unclear,,
+1062,bounce,bounce,,
+1133,bounce,unclear,,
+1200,bounce,bounce,,
+3420,bounce,none,,ball on the next court
+3527,bounce,bounce,,
+3875,bounce,bounce,,dribble
+4149,bounce,bounce,,
+4191,bounce,bounce,,
+5488,bounce,bounce,,dribble
+250,wall,unclear,,
+1212,wall,hit,3,"P3 shot, missed as a hit"
+2057,wall,none,,smooth flight
+3601,wall,none,,ball on the next court
+4134,wall,none,,smooth flight
+5502,wall,handling,2,

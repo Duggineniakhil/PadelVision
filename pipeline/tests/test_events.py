@@ -128,3 +128,32 @@ def test_best_depth_match_gets_the_hit(cal):
     boxes += [(f, 4, "far", 480, 390, 520, 450) for f in range(31)]  # 60 px tall
     ev = detect_events(_ball(pts, size=10.5), _players(boxes), cal, FPS)  # far-ball size
     assert list(ev.kind) == ["hit"] and ev.player.iloc[0] == 4
+
+
+def test_return_after_the_other_team_is_a_hit_and_duplicate_turns_merge(cal):
+    # A far player (60 px box) hits at frame 6; the ball comes back and a near player meets it
+    # at frame 26 but the ball hardly moves in the image afterwards (a deep shot).
+    far = [(i, 500 + 8 * (i - 6), 300 + 6 * (i - 6)) if i < 6
+           else (i, 500 - 4 * (i - 6), 300 + 14 * (i - 6))
+           for i in range(20)]  # fmt: skip
+    near = [(i, 450 + 2 * (i - 26), 580 - 0.5 * (i - 26)) if i > 26
+            else (i, 450 - 4 * (i - 26), 580 + 6 * (i - 26))
+            for i in range(20, 60)]  # fmt: skip
+    ball = pd.concat([_ball(far, track=1, size=11.0), _ball(near, track=2, size=27.0)])
+    boxes = [(f, 4, "far", 480, 260, 520, 320) for f in range(60)]
+    boxes += [(f, 2, "near", 380, 400, 480, 720) for f in range(60)]  # 320 px tall
+    ev = detect_events(ball.reset_index(drop=True), _players(boxes), cal, FPS)
+    hits = ev[ev.kind.isin(["hit", "handling"])]
+    assert list(hits.kind) == ["hit", "hit"] and list(hits.player) == [4, 2]
+
+
+def test_two_turns_of_one_contact_are_one_hit(cal):
+    # The ball arrives, is slowed by the racket (turn 1, frame 10) and sent away (turn 2,
+    # frame 18): one contact, kept at the turn with the fastest outgoing ball.
+    pts = [(i, 500 + 8 * (i - 10), 450 + 6 * (i - 10)) for i in range(10)]
+    pts += [(i, 500 - 2.5 * (i - 10), 450 + 0.6 * (i - 10)) for i in range(10, 18)]
+    pts += [(i, 480 - 4 * (i - 18), 455 - 14 * (i - 18)) for i in range(18, 40)]
+    player = _players([(f, 2, "near", 440, 380, 560, 700) for f in range(40)])  # 320 px tall
+    ev = detect_events(_ball(pts, size=27.0), player, cal, FPS)
+    contacts = ev[ev.kind.isin(["hit", "handling"])]
+    assert list(contacts.kind) == ["hit"] and contacts.frame.iloc[0] == 18

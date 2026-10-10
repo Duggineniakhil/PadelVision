@@ -79,6 +79,8 @@ from short far lines overfits). With it, far players near the far baseline are n
 padelvision analyze <video> --court court.json --out runs/match1 [--stride 2] [--max-frames 900]
 padelvision render <video> --run runs/match1 --start 0 --seconds 30   # + stats overlay (--no-hud to drop it)
 padelvision highlights <video> --run runs/match1 [--mode top|all] [--top 5]   # best rallies / condensed match
+#   ml/notebooks/07_highlights.ipynb: reuses a cached run (notebook 06's events_review.zip as a Kaggle dataset),
+#   refreshes stages 3-6 on CPU, then builds the highlights; no GPU or re-detection needed.
 padelvision ball-bootstrap <video> --run runs/match1          # classical candidates + pseudo-labels
 padelvision ball-review-pack <video> --run runs/match1 --out ball_review
 padelvision ball-track <video> --run runs/match1               # stage 4: ball in play (ml/notebooks/05)

@@ -19,6 +19,8 @@ def render_preview(
     start_s: float = 0.0,
     seconds: float = 30.0,
     ball: pd.DataFrame | None = None,
+    events: pd.DataFrame | None = None,
+    rallies: list[dict] | None = None,
 ) -> Path:
     cap = cv2.VideoCapture(str(video_path))
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -29,6 +31,8 @@ def render_preview(
 
     by_frame = {f: g for f, g in players.groupby("frame")}
     ball_at = {} if ball is None else {int(r.frame): r for r in ball.itertuples()}
+    shown = pd.DataFrame() if events is None else events[events.kind.isin(EVENT_STYLE)]
+    show_frames = round(EVENT_SHOW_S * fps)
     if players.empty or first > players.frame.max() or first + seconds * fps < players.frame.min():
         print(
             f"warning: {start_s:.0f}-{start_s + seconds:.0f}s has no analysed frames "
@@ -64,6 +68,10 @@ def render_preview(
                     if r.valid:
                         cv2.circle(canvas, mini.to_px((r.x_m, r.y_m)), 5, color, -1, cv2.LINE_AA)
             _draw_ball(img, ball_at, frame)
+            if len(shown):
+                recent = shown[shown.frame.between(frame - show_frames, frame)]
+                _draw_events(img, canvas, mini, recent)
+            _draw_rally(img, rallies or [], shown, frame)
             mh, mw = canvas.shape[:2]
             img[10 : 10 + mh, w - mw - 10 : w - 10] = canvas
             cv2.putText(
@@ -98,3 +106,35 @@ def _draw_ball(img, ball_at: dict, frame: int) -> None:
         filled = -1 if r.state == "detected" else 1
         cv2.circle(img, (round(r.u), round(r.v)), 6, (0, 255, 255), filled, cv2.LINE_AA)
         cv2.circle(img, (round(r.u), round(r.v)), 9, (0, 0, 0), 1, cv2.LINE_AA)
+
+
+EVENT_SHOW_S = 0.5  # an event stays marked this long
+EVENT_STYLE = {"hit": (0, 0, 255), "bounce": (0, 220, 0)}  # BGR; walls/handling not shown
+
+
+def _draw_events(img, canvas, mini: MiniCourt, recent: pd.DataFrame) -> None:
+    for e in recent.itertuples():
+        color = EVENT_STYLE[e.kind]
+        p = (round(e.u), round(e.v))
+        cv2.circle(img, p, 16, color, 2, cv2.LINE_AA)
+        label = f"HIT P{int(e.player)}" if e.kind == "hit" else "BOUNCE"
+        cv2.putText(img, label, (p[0] + 18, p[1] - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2,
+                    cv2.LINE_AA)  # fmt: skip
+        if e.kind == "bounce" and e.x_m == e.x_m:  # court position only for bounces
+            cv2.drawMarker(
+                canvas, mini.to_px((e.x_m, e.y_m)), color, cv2.MARKER_TILTED_CROSS, 10, 2
+            )
+
+
+def _draw_rally(img, rallies: list[dict], events: pd.DataFrame, frame: int) -> None:
+    rally = next((r for r in rallies if r["start_frame"] <= frame <= r["end_frame"]), None)
+    if rally is None:
+        return
+    hits = 0
+    if len(events):
+        hits = int(
+            ((events.kind == "hit") & events.frame.between(rally["start_frame"], frame)).sum()
+        )
+    text = f"RALLY {rally['id']}  hits {hits}"
+    cv2.rectangle(img, (8, 8), (30 + 13 * len(text), 42), (0, 0, 0), -1)
+    cv2.putText(img, text, (16, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)

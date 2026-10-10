@@ -16,6 +16,8 @@ runs/<name>/
   ball_stats.json          stage 4  tracking summary
   events.parquet           stage 5  hits / handling / floor bounces (with court position) / walls
   rallies.json             stage 5  rallies (segments with an exchange) + other ball activity
+                                    + rally stats (counts, placement, shot speed estimate)
+  placement.png            stage 7  where each team's shots landed
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ from pathlib import Path
 import cv2
 import pandas as pd
 
-from padelvision.analytics import movement_stats, smooth_tracks
+from padelvision.analytics import movement_stats, rally_stats, smooth_tracks
 from padelvision.ball.candidates import court_roi
 from padelvision.ball.track import track_ball
 from padelvision.court.calibration import CourtCalibration
@@ -35,7 +37,7 @@ from padelvision.court.draw import draw_court_overlay
 from padelvision.models import weights_path
 from padelvision.players import assign_players, run_detection
 from padelvision.video import probe
-from padelvision.visuals import save_heatmaps
+from padelvision.visuals import save_heatmaps, save_placement_map
 
 
 def analyze(
@@ -226,11 +228,17 @@ def events(run_dir: str | Path) -> dict:
         "rallies": rallies,
         # ball activity without an exchange (handling, warm-up, or no hit seen): not rallies
         "other_activity": [s for s in segments if not s["exchange"]],
+        "stats": rally_stats(ev, rallies, players, fps),
     }
     (out / "rallies.json").write_text(json.dumps(summary, indent=2))
+    save_placement_map(summary["stats"], out / "placement.png")
+    speed = summary["stats"].get("shot_speed_estimate", {})
     print(
         f"[5] events {summary['events']}; {len(rallies)} rallies "
         f"({len(segments) - len(rallies)} other activity segments); "
-        f"hits by player {summary['hits_by_player']}"
+        f"hits by player {summary['hits_by_player']}\n"
+        f"[6] rally stats + placement.png; shot speed estimate: "
+        f"{speed.get('median_kmh', speed.get('insufficient_data'))} "
+        f"(median km/h, {speed.get('samples', 0)} shots)"
     )
     return summary

@@ -42,7 +42,10 @@ in `rallies.json`. A turn right after the other team's hit is a return (always a
 the image), and same-player turns within 0.35 s are one contact. Visual precision check of the predicted events
 (`ml/eval/labels/Test_video_events_reviewed.csv`, precision only): hits inside rallies 17/17 real (+1 unclear);
 the remaining false hits are ball tapping outside rallies; bounces 9/11 decided; walls ~0/6 (unreliable).
-Recall still needs human `label-events` labels. Test_video: 4 rallies (8.0-12.9, 31.7-48.4, 67.2-74.0, 136.3-141.9 s).
+Recall still needs human `label-events` labels. Rally stats (`analytics/rallies.py`) go into `rallies.json["stats"]` (not
+stats.json, which `restats` rewrites): rally counts/lengths, hits per player/team, placement of each team's shots
+(`placement.png`), and a shot speed ESTIMATE (hitter's feet -> landing bounce on the other side / time; a lower
+bound, null below 3 shots). Test_video: 6 measured shots, median ~48 km/h. `render` draws hits/bounces + rally banner. Test_video: 4 rallies (8.0-12.9, 31.7-48.4, 67.2-74.0, 136.3-141.9 s).
 Ball detections now carry `size` (min box side, px). `web/` and `api/` don't exist yet. Don't invent commands
 for tooling that hasn't been set up; add them here once they exist.
 

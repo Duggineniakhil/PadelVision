@@ -1,6 +1,7 @@
 # PadelVision V2 — Project Plan
 
-Status: Phase 0 done (2026-10-08); next is phase 1. Scope: a **personal / portfolio project**, not a commercial
+Status (2026-10-11): phases 0-2 done; phase 3 (events, rallies, rally stats, placement map) built and
+precision-checked on Test_video; hit/bounce recall still needs human labels. Next: phase 4 (local web app). Scope: a **personal / portfolio project**, not a commercial
 product yet. Product concerns (accounts, cloud hosting, payments) are parked in §8.
 
 ## 1. Goal
@@ -133,6 +134,9 @@ Code loads models only through `padelvision.models.registry.load(name)`.
 
 **Phase 3 — Events**
 - Hit, bounce and rally detection; placement map; rally stats.
+- *Built:* `events.py` (hit / handling / bounce / wall, rallies need an exchange), `analytics/rallies.py`
+  (rally stats, placement, shot speed estimate = hitter's feet -> landing bounce, a lower bound),
+  `placement.png`, hit/bounce markers in the preview. Eval: `events-eval` + `label-events`.
 
 **Phase 4 — Local web app**
 - FastAPI + Next.js: upload, calibration, progress, dashboard with canvas overlays.

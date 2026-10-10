@@ -141,6 +141,7 @@ def _cmd_events_eval(args: argparse.Namespace) -> int:
 
 
 def _cmd_render(args: argparse.Namespace) -> int:
+    import json
     from pathlib import Path
 
     import pandas as pd
@@ -150,6 +151,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
 
     run_dir = Path(args.run)
     ball_path = run_dir / "ball.parquet"
+    events_path, rallies_path = run_dir / "events.parquet", run_dir / "rallies.json"
     out = render_preview(
         args.video,
         pd.read_parquet(run_dir / "players.parquet"),
@@ -158,6 +160,8 @@ def _cmd_render(args: argparse.Namespace) -> int:
         start_s=args.start,
         seconds=args.seconds,
         ball=pd.read_parquet(ball_path) if ball_path.exists() else None,
+        events=pd.read_parquet(events_path) if events_path.exists() else None,
+        rallies=json.loads(rallies_path.read_text())["rallies"] if rallies_path.exists() else None,
     )
     print(out)
     return 0

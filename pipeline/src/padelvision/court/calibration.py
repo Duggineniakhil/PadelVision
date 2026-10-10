@@ -23,6 +23,9 @@ from padelvision.court.geometry import COURT_KEYPOINTS, NAMED_LINES
 from padelvision.court.lens import LensModel, fit_lens
 
 Pts = list[tuple[float, float]]
+# Sample rows (court y, metres) for the per-zone accuracy report; near side is y < 0.
+ACCURACY_ZONES = {"near_half": (-8.0, -6.95, -4.0), "net": (-1.0, 0.0, 1.0),
+                  "far_half": (4.0, 6.95, 9.0)}  # fmt: skip
 
 
 @dataclass
@@ -122,8 +125,76 @@ class CourtCalibration:
         return errors
 
     def reprojection_error_m(self) -> float:
-        """Mean constraint error in metres. Only meaningful with more than 4 constraints."""
+        """Mean constraint error in metres. Only meaningful with more than 4 constraints.
+
+        Misleading for a low camera: near the net 1 px is ~0.17 m of depth, so a 4 px click
+        offset there dominates the mean. Use `accuracy()` to judge a calibration."""
         return float(np.mean(list(self.point_errors_m().values())))
+
+    def constraint_errors_px(self) -> dict[str, float]:
+        """Per constraint, in raw image pixels: keypoint distance from its projected court
+        position, or for a named line ("line:<name>") the RMS distance of its points from
+        the projected court line."""
+        errors = {}
+        for name, p in self.image_points.items():
+            proj = self.to_image(np.array([COURT_KEYPOINTS[name]]))[0]
+            errors[name] = float(np.hypot(*(proj - np.asarray(p))))
+        t = np.linspace(-15.0, 15.0, 3001)
+        for name, pts in self.named_lines.items():
+            a, b, c = NAMED_LINES[name]  # a x + b y + c = 0, (a, b) unit
+            poly = self.to_image(np.c_[-c * a - t * b, -c * b + t * a])
+            poly = poly[np.isfinite(poly).all(axis=1)]
+            d = [np.min(np.hypot(*(poly - np.asarray(p)).T)) for p in pts]
+            errors[f"line:{name}"] = float(np.sqrt(np.mean(np.square(d))))
+        return errors
+
+    def metres_per_px(self, court_xy: tuple[float, float]) -> float | None:
+        """Ground position error caused by a 1 px image error at a court point (the worst
+        direction: depth, for a low camera). None if the point isn't in the image."""
+        px = self.to_image(np.array([court_xy]))[0]
+        w, h = self.image_size
+        if not np.isfinite(px).all() or not (0 <= px[0] < w and 0 <= px[1] < h):
+            return None
+        d = 0.5
+        jac = np.c_[
+            self.to_court(np.array([px + [d, 0]]))[0] - self.to_court(np.array([px - [d, 0]]))[0],
+            self.to_court(np.array([px + [0, d]]))[0] - self.to_court(np.array([px - [0, d]]))[0],
+        ] / (2 * d)
+        return float(np.linalg.svd(jac, compute_uv=False)[0])
+
+    def accuracy(self) -> dict:
+        """How well the calibration fits (px) and what that means on the ground per zone.
+
+        expected_error_m = constraint RMS (px, at least 1 px) x metres per px, the median
+        over visible sample points of the zone. Judge the near half against the 15 cm
+        target; at the net and beyond, a low camera can't do much better than ~1 px.
+        """
+        errs = self.constraint_errors_px()
+        rms = float(np.sqrt(np.mean(np.square(list(errs.values()))))) if errs else None
+        zones = {}
+        for zone, ys in ACCURACY_ZONES.items():
+            scales = [self.metres_per_px((x, y)) for y in ys for x in (-3.0, 0.0, 3.0)]
+            scales = [s for s in scales if s is not None]
+            if not scales or rms is None:
+                zones[zone] = {"m_per_px": None, "expected_error_m": None}
+                continue
+            m_px = float(np.median(scales))
+            zones[zone] = {"m_per_px": round(m_px, 3),
+                           "expected_error_m": round(max(rms, 1.0) * m_px, 2)}  # fmt: skip
+        return {
+            "constraints_px": {k: round(v, 2) for k, v in errs.items()},
+            "rms_px": None if rms is None else round(rms, 2),
+            "zones": zones,
+        }
+
+    def accuracy_summary(self) -> str:
+        acc = self.accuracy()
+        err = {}
+        for zone, info in acc["zones"].items():
+            e = info["expected_error_m"]
+            err[zone] = "n/a" if e is None else f"{e:.2f} m"
+        return (f"fit {acc['rms_px']} px rms; expected ground error near half "
+                f"{err['near_half']}, net {err['net']}, far half {err['far_half']}")  # fmt: skip
 
     def to_dict(self) -> dict:
         return {
@@ -134,7 +205,7 @@ class CourtCalibration:
             "lens": self.lens.to_dict(),
             "line_rms_px": self.line_rms_px,
             "image_to_court": self.image_to_court.tolist(),
-            "reprojection_error_m": self.reprojection_error_m(),
+            "accuracy": self.accuracy(),
             "point_errors_m": self.point_errors_m(),
         }
 

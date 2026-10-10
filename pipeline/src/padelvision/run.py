@@ -66,7 +66,7 @@ def analyze(
         )
     cal.save(out / "court.json")
     _save_overlay(video, info.frame_count // 2, cal, out / "court_overlay.png")
-    print(f"[1] court: mean keypoint error {cal.reprojection_error_m() * 100:.0f} cm")
+    print(f"[1] court: {cal.accuracy_summary()}")
 
     det_path, det_meta = out / "detections.parquet", out / "detections.json"
     params = {"model": model, "stride": stride, "max_frames": max_frames, "imgsz": imgsz}
@@ -116,7 +116,7 @@ def _player_stages(dets, cal, fps: float, stride: int, limit: int, out: Path) ->
     tracks.to_parquet(out / "tracks.parquet")
     stats = movement_stats(tracks, players, fps, stride, analysed)
     stats["analysed"] = {"frames": analysed, "stride": stride, "duration_s": limit / fps}
-    stats["court_error_m"] = cal.reprojection_error_m()
+    stats["court_accuracy"] = cal.accuracy()
     (out / "stats.json").write_text(json.dumps(stats, indent=2))
     print("[6] stats.json written")
 

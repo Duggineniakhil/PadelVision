@@ -32,7 +32,7 @@ HELP = {
         "S = not visible, skip   U = undo   ESC = quit",
     ),
     "review": (
-        "STEP 3/3  REVIEW - mean error {err}   lens line error {rms}",
+        "STEP 3/3  REVIEW - fit {err}   lens line error {rms}",
         "ENTER = save   P = redo points   L = redo lines   ESC = quit",
     ),
 }
@@ -164,7 +164,9 @@ class CalibrationTool:
             if self.cal is None:
                 return f"Calibration failed: {self.error}", "P = redo points   L = redo lines"
             rms = f"{self.cal.line_rms_px:.1f}px" if self.cal.line_rms_px is not None else "n/a"
-            top = top.format(err=f"{self.cal.reprojection_error_m() * 100:.0f}cm", rms=rms)
+            acc = self.cal.accuracy()
+            near = acc["zones"]["near_half"]["expected_error_m"]
+            top = top.format(err=f"{acc['rms_px']} px (near half ~{near} m)", rms=rms)
         elif self.mode == "lines":
             top += f"   [{len(self.lines)} lines]"
         return top, bottom
@@ -243,7 +245,7 @@ def run(image_path: str | Path, out_path: str | Path) -> CourtCalibration | None
     preview = out_path.with_name(out_path.stem + "_preview.png")
     cv2.imwrite(str(preview), draw_court_overlay(image, tool.cal))
     print(f"Saved {out_path} and {preview}")
-    print(f"Mean keypoint error: {tool.cal.reprojection_error_m() * 100:.1f} cm")
+    print(f"Court: {tool.cal.accuracy_summary()}")
     for name, err in sorted(tool.cal.point_errors_m().items(), key=lambda kv: -kv[1]):
         print(f"  {name:22s} {err * 100:6.1f} cm")
     return tool.cal

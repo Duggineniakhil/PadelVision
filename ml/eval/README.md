@@ -6,8 +6,11 @@ videos stay on Kaggle/Drive (never in git). So far everything is measured on one
 ball handling, with 4 short rallies). Numbers will move when a second video is added.
 
 ## Court calibration
-Calibrations live in `ml/calibrations/<video stem>.json` (made with `padelvision calibrate`). The pipeline prints
-the mean keypoint error at stage 1 (`[1] court: mean keypoint error ...`).
+Calibrations live in `ml/calibrations/<video stem>.json` (made with `padelvision calibrate`). `CourtCalibration.accuracy()`
+(printed at stage 1, saved in court.json and stats.json) gives each constraint's fit in pixels and, per zone, the
+ground error that a fit of that size means there (metres per pixel x RMS px, at least 1 px). It is an estimate from
+the court lines themselves, not a tape-measured check. The < 15 cm target applies to the near half: near the net
+1 px is ~0.11 m of depth and in the far half ~0.3 m for a low camera.
 
 ## Ball (phase 2): pooled labels
 ```
@@ -52,7 +55,7 @@ never overlapped. Not covered: the 112 s outside the windows, and changeovers (b
 ## Targets and current results (Test_video)
 | Metric | Target | Current | Phase |
 |---|---|---|---|
-| Court mean keypoint error | < 15 cm | 32 cm (not met) | 1 |
+| Court: expected ground error, near half / net / far half | < 15 cm (near half) | 0.04 / 0.25 / 0.67 m (fit 2.2 px rms) | 1 |
 | Player ID switches | < 2 per minute | 0 in 94 s reviewed (visual) | 1 |
 | Ball detector recall / precision (10 px, held-out blocks) | >= 80% / >= 90% | 74% / 85% (not met) | 2 |
 | Ball in play found (stage 4) | | 53% of frames | 2 |

@@ -120,7 +120,8 @@ Code loads models only through `padelvision.models.registry.load(name)`.
 
 **Phase 1 — Player analytics CLI (no training)**
 - Stages 0–3, 6 and 7 for players. Calibration uses a small OpenCV click tool that saves `court.json`.
-- *Done when:* court error is under 15 cm, there are fewer than 2 ID switches per minute, and distances look right on the test clips.
+- *Done when:* the expected ground error in the near half is under 15 cm (at the net and beyond a low camera
+  can't reach that: report per zone, see `CourtCalibration.accuracy()`), there are fewer than 2 ID switches per minute, and distances look right on the test clips.
 
 **Phase 2 — Ball model (Kaggle)**
 - **Bootstrap labels without a model** (`ml/notebooks/02_ball_bootstrap.ipynb`): three-frame

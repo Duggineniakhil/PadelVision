@@ -141,3 +141,28 @@ def test_geometry_helpers():
     np.testing.assert_array_equal(in_court(np.array([0, 6]), np.array([0, 0])), [True, False])
     assert [zone_of(y) for y in (1, -5, 9)] == ["net", "transition", "back"]
     assert set(COURT_KEYPOINTS) >= set(CORNER_NAMES)
+
+
+def test_accuracy_report_in_pixels_and_per_zone():
+    def along(y):
+        return [tuple(p) for p in project([(-4.0, y), (0.0, y), (4.0, y)])]
+
+    centre = [tuple(p) for p in project([(0.0, -6.0), (0.0, -2.0), (0.0, 3.0)])]
+    named = {"near_service_line": along(-6.95), "far_baseline": along(10.0), "center_line": centre}
+    exact = CourtCalibration.from_points(clicks(["net_left", "net_right"]), SIZE, named_lines=named)
+    acc = exact.accuracy()
+    assert acc["rms_px"] < 1e-3 and set(acc["constraints_px"]) == {
+        "net_left", "net_right", "line:near_service_line", "line:far_baseline",
+        "line:center_line"}  # fmt: skip
+    z = acc["zones"]
+    # A camera behind the near baseline: 1 px covers more ground the further away it is.
+    assert z["near_half"]["m_per_px"] < z["net"]["m_per_px"] < z["far_half"]["m_per_px"]
+    near = z["near_half"]
+    assert abs(near["expected_error_m"] - near["m_per_px"]) <= 0.006  # exact fit: 1 px floor
+
+    off = dict(clicks(["net_left", "net_right"]))
+    off["net_left"] = (off["net_left"][0], off["net_left"][1] + 4.0)  # a 4 px click error
+    noisy = CourtCalibration.from_points(off, SIZE, named_lines=named)
+    errs = noisy.accuracy()["constraints_px"]
+    assert noisy.accuracy()["rms_px"] > 0.3 and max(errs, key=errs.get) == "net_left"
+    assert "near half" in noisy.accuracy_summary()

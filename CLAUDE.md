@@ -12,7 +12,7 @@ it before starting larger work.
 ## Status
 Phases 0-3 are built; phase 4 (web app) is deferred. Everything is tuned and measured on one video, the
 developer's Test_video (206 s, mostly warm-up and ball handling, 4 short rallies). Current numbers and gaps are
-in `ml/eval/README.md`; open items: court error 32 cm (target < 15 cm), ball
+in `ml/eval/README.md`; open items: ball
 detector below target, hit/bounce recall unmeasured (needs human `label-events` labels), a second video.
 
 - Players (stages 2-3, 6-7): bystander filtering, identity gating and Kalman smoothing tuned on real detections.
@@ -51,8 +51,13 @@ Calibration notes: the lens uses a **division model** (the polynomial model coul
 GoPro lines). Constraints can be keypoints and/or **named court lines** (`NAMED_LINES` in
 `geometry.py`); the lens and homography are refined jointly. Freeing the distortion centre
 overfits, so keep it fixed. Calibrations for specific videos live in `ml/calibrations/<video stem>.json`.
-For the developer's low camera, depth near the net is about 6 px/m: expect roughly 0.3 m error in the near
-half and about 1 m near the net and beyond.
+Judge a calibration with `cal.accuracy()` (printed at stage 1, stored in court.json and stats.json): constraint
+fit in pixels plus expected ground error per zone (near half / net / far half). Don't use the old mean-metres
+error: near the net 1 px is ~0.11 m and in the far half ~0.3 m, so a 4 px click there dominated it. The target
+(< 15 cm) applies to the near half. Test_video (2026-10-11): fit 2.2 px rms; near half 0.04 m, net 0.25 m, far
+half 0.67 m. Its far baseline, far side edges and far centre line were snapped from a median background of the
+video; 6 old right-side points that sat on a floor stripe were dropped; the lens was kept fixed (refitting it
+from short far lines overfits). With it, far players near the far baseline are no longer dropped as off-court.
 
 ## Commands (run from repo root; Windows venv paths shown)
 ```bash

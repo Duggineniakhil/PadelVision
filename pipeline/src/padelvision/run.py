@@ -14,8 +14,8 @@ runs/<name>/
   ball_detections.json     stage 4  settings the cache was made with
   ball.parquet             stage 4  ball in play per frame (image px; detected / interpolated)
   ball_stats.json          stage 4  tracking summary
-  events.parquet           stage 5  hits / floor bounces (with court position) / wall rebounds
-  rallies.json             stage 5  rallies with hit and bounce counts
+  events.parquet           stage 5  hits / handling / floor bounces (with court position) / walls
+  rallies.json             stage 5  rallies (segments with an exchange) + other ball activity
 """
 
 from __future__ import annotations
@@ -204,7 +204,7 @@ def _ball_stages(dets: pd.DataFrame, fps: float, n_frames: int, out: Path) -> di
 
 def events(run_dir: str | Path) -> dict:
     """Stage 5: events + rallies from ball.parquet and players.parquet (no video or GPU)."""
-    from padelvision.events import detect_events, detect_rallies
+    from padelvision.events import activity_segments, detect_events
 
     out = Path(run_dir)
     fps = json.loads((out / "video.json").read_text())["fps"]
@@ -213,20 +213,24 @@ def events(run_dir: str | Path) -> dict:
     cal = CourtCalibration.load(out / "court.json")
     ev = detect_events(ball, players, cal, fps)
     ev.to_parquet(out / "events.parquet")
-    rallies = detect_rallies(ball, ev, fps)
+    segments = activity_segments(ball, ev, fps)
+    rallies = [s for s in segments if s["exchange"]]
     bounces = ev[ev.kind == "bounce"]
     summary = {
         "events": {k: int(v) for k, v in ev.kind.value_counts().items()},
         "ball_size_known": bool(ball["size"].notna().any()) if "size" in ball else False,
-        "bounces_in_court": int(bounces.in_court.fillna(False).astype(bool).sum()),
+        "bounces_in_court": int(bounces.in_court.eq(True).sum()),
         "hits_by_player": {
             str(int(k)): int(v) for k, v in ev[ev.kind == "hit"].player.value_counts().items()
         },
         "rallies": rallies,
+        # ball activity without an exchange (handling, warm-up, or no hit seen): not rallies
+        "other_activity": [s for s in segments if not s["exchange"]],
     }
     (out / "rallies.json").write_text(json.dumps(summary, indent=2))
     print(
-        f"[5] events {summary['events']}; {len(rallies)} rallies; "
+        f"[5] events {summary['events']}; {len(rallies)} rallies "
+        f"({len(segments) - len(rallies)} other activity segments); "
         f"hits by player {summary['hits_by_player']}"
     )
     return summary

@@ -16,11 +16,18 @@ Each turn is classified:
             Expected size = a + b * player box height (the detector's boxes have a floor of ~7 px
             from blur/padding, so a pure ratio doesn't work). When several players are in reach,
             the best depth match gets the hit.
+- "handling": a "hit" after which the ball never leaves the player's surroundings (bouncing
+            the ball on the floor or racket between points, before a serve, picking it up).
+            A real shot sends the ball more than LEAVE_REACH box heights away within
+            HANDLING_WINDOW_S. If the ball is mostly unseen in that window, it stays a hit.
 - "bounce": the ball was moving down the image and then up (floor bounce)
 - "wall":   any other sharp turn (glass rebounds, net cord, a hit we can't attribute)
 
 Only bounces get a court position: the ball is on the ground there, so the homography is
-valid. Rallies are runs of ball-in-play frames separated by pauses > RALLY_GAP_S.
+valid. Ball activity is split into segments at pauses > RALLY_GAP_S. A segment is a rally
+only if it shows an exchange: hits by both teams, or a hit followed by a floor bounce on the
+other side of the net. Other segments (ball handling, warm-up feeding, segments where no
+hit was seen) are reported separately and never counted as rallies.
 """
 
 from __future__ import annotations
@@ -45,6 +52,11 @@ BOUNCE_COURT_MARGIN_M = 0.5
 # seen inside a near player's box come out at ~0.53. Re-fit for another camera or detector.
 BALL_SIZE_AT_PLAYER = (7.28, 0.0625)
 SIZE_MATCH_TOL = 1.43  # accept actual/expected within [1/1.43, 1.43] = [0.70, 1.43]
+# Ball handling vs a shot, tuned on Test_video: after the dribbles in rallies 4/7 the ball stays
+# within ~0.35 box heights of the player; shots carry it 0.5-10 box heights away.
+HANDLING_WINDOW_S = 0.6
+LEAVE_REACH = 0.5  # box heights beyond the player's box (sides, top, bottom)
+MIN_SEEN = 1 / 3  # fraction of the window with ball + player box needed to call it handling
 RALLY_GAP_S = 2.0
 MIN_RALLY_S = 1.5
 
@@ -58,11 +70,14 @@ def detect_events(
     turns = _turns_within(ball) + _turns_at_junctions(ball)
     turns = _suppress(turns)
     boxes = {f: g for f, g in players.groupby("frame")} if len(players) else {}
+    ball_at = dict(zip(ball.frame, zip(ball.u, ball.v, strict=True), strict=True))
+    window = max(1, round(HANDLING_WINDOW_S * fps))
     rows = []
     for tr in turns:
         player, team = _reaching_player(boxes.get(tr["frame"]), tr["u"], tr["v"], tr["size"])
         if player is not None:
-            kind = "hit"
+            away = _sends_ball_away(ball_at, boxes, player, tr["frame"], window)
+            kind = "hit" if away else "handling"
         elif tr["dv_in"] > 0 and tr["dv_out"] < 0:
             kind = "bounce"
         else:
@@ -82,31 +97,53 @@ def detect_events(
     return pd.DataFrame(rows, columns=EVENT_COLUMNS).sort_values("frame").reset_index(drop=True)
 
 
-def detect_rallies(ball: pd.DataFrame, events: pd.DataFrame, fps: float) -> list[dict]:
-    """Runs of ball activity separated by pauses longer than RALLY_GAP_S."""
+def activity_segments(ball: pd.DataFrame, events: pd.DataFrame, fps: float) -> list[dict]:
+    """Runs of ball activity separated by pauses longer than RALLY_GAP_S; `exchange` marks
+    the ones that are rallies (see the module docstring)."""
     if ball.empty:
         return []
     frames = ball.frame.to_numpy()
     breaks = np.flatnonzero(np.diff(frames) > RALLY_GAP_S * fps) + 1
-    rallies = []
+    segments = []
     for seg in np.split(frames, breaks):
         start, end = int(seg[0]), int(seg[-1])
         if (end - start) / fps < MIN_RALLY_S:
             continue
         ev = events[(events.frame >= start) & (events.frame <= end)]
         hits = ev[ev.kind == "hit"]
-        rallies.append({
-            "id": len(rallies) + 1,
+        segments.append({
+            "id": len(segments) + 1,
             "start_frame": start, "end_frame": end,
             "start_s": round(start / fps, 2), "end_s": round(end / fps, 2),
             "duration_s": round((end - start) / fps, 2),
             "ball_coverage": round(len(seg) / (end - start + 1), 2),
+            "exchange": _has_exchange(ev),
             "hits": int(len(hits)),
+            "handling": int((ev.kind == "handling").sum()),
             "bounces": int((ev.kind == "bounce").sum()),
             "walls": int((ev.kind == "wall").sum()),
             "hits_by_player": {str(int(k)): int(v) for k, v in hits.player.value_counts().items()},
         })  # fmt: skip
-    return rallies
+    return segments
+
+
+def detect_rallies(ball: pd.DataFrame, events: pd.DataFrame, fps: float) -> list[dict]:
+    """Activity segments that show an exchange (ids are the segment ids)."""
+    return [s for s in activity_segments(ball, events, fps) if s["exchange"]]
+
+
+def _has_exchange(ev: pd.DataFrame) -> bool:
+    """Hits by both teams, or a hit followed by a floor bounce on the other side of the net
+    (near team = y < 0)."""
+    hits = ev[ev.kind == "hit"]
+    if hits.team.nunique() >= 2:
+        return True
+    bounces = ev[(ev.kind == "bounce") & ev.y_m.notna()] if "y_m" in ev else ev.iloc[:0]
+    for h in hits.itertuples():
+        later = bounces[bounces.frame > h.frame]
+        if len(later) and ((later.y_m.iloc[0] > 0) == (h.team == "near")):
+            return True
+    return False
 
 
 def _turns_within(ball: pd.DataFrame) -> list[dict]:
@@ -189,6 +226,27 @@ def _suppress(turns: list[dict]) -> list[dict]:
         if all(abs(t["frame"] - k["frame"]) > NMS_FRAMES for k in kept):
             kept.append(t)
     return sorted(kept, key=lambda t: t["frame"])
+
+
+def _sends_ball_away(ball_at: dict, boxes: dict, player: int, frame: int, window: int) -> bool:
+    """Does the ball get more than LEAVE_REACH box heights away from `player` within `window`
+    frames after `frame`? True when there's too little data to tell (keep it a hit)."""
+    out = []
+    for f in range(frame + 1, frame + window + 1):
+        if f not in ball_at or f not in boxes:
+            continue
+        b = boxes[f][boxes[f].player == player]
+        if b.empty:
+            continue
+        x1, y1, x2, y2 = b[["x1", "y1", "x2", "y2"]].iloc[0]
+        h = max(y2 - y1, 1.0)
+        u, v = ball_at[f]
+        dx = max(x1 - u, u - x2, 0.0)
+        dy = max(y1 - v, v - y2, 0.0)
+        out.append(max(dx, dy) / h)
+    if len(out) < MIN_SEEN * window:
+        return True
+    return max(out) >= LEAVE_REACH
 
 
 def _reaching_player(boxes: pd.DataFrame | None, u: float, v: float, size: float = float("nan")):

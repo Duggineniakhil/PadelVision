@@ -121,12 +121,8 @@ def track_ball(
     used = dets[dets.conf >= DET_CONF]
     tracklets = link(used)
     kinds = classify_tracklets(tracklets, roi)
-    moving = sorted((t for t in tracklets if kinds[t.id] == "moving"), key=lambda t: -t.score)
-
-    claimed: dict[int, tuple] = {}
-    for t in moving:
-        for frame, row in _expand(t).items():
-            claimed.setdefault(frame, row)
+    moving = [t for t in tracklets if kinds[t.id] == "moving"]
+    claimed = _select_in_play(moving)
     rows = [(f, f / fps, *claimed[f]) for f in sorted(claimed)]
     ball = pd.DataFrame(rows, columns=BALL_COLUMNS)
 
@@ -144,6 +140,36 @@ def track_ball(
         "coverage": round(len(ball) / n_frames, 3) if n_frames else 0.0,
     }
     return ball, stats
+
+
+def _select_in_play(moving: list[Tracklet]) -> dict[int, tuple]:
+    """Frame -> row of the ball in play. The current tracklet is kept while it lasts; after it
+    ends, the strongest tracklet the ball could have reached (FIRST_STEP_MAX_PX per frame since
+    it was last seen) takes over. A ball elsewhere (another court, a spare ball in a player's
+    hand) can only take over once the ball has been missing long enough to travel there."""
+    expanded = {t.id: _expand(t) for t in moving}
+    score = {t.id: t.score for t in moving}
+    by_frame: dict[int, list[int]] = {}
+    for tid, rows in expanded.items():
+        for f in rows:
+            by_frame.setdefault(f, []).append(tid)
+    claimed: dict[int, tuple] = {}
+    cur, last_f, last_p = None, None, None
+    for f in sorted(by_frame):
+        if cur not in by_frame[f]:
+            cands = by_frame[f]
+            if last_p is not None:
+                reach = FIRST_STEP_MAX_PX * (f - last_f)
+                cands = [
+                    tid for tid in cands
+                    if np.hypot(*(np.asarray(expanded[tid][f][:2]) - last_p)) <= reach
+                ]  # fmt: skip
+            if not cands:
+                continue
+            cur = max(cands, key=score.__getitem__)
+        claimed[f] = expanded[cur][f]
+        last_f, last_p = f, np.asarray(claimed[f][:2])
+    return claimed
 
 
 def _expand(t: Tracklet) -> dict[int, tuple]:

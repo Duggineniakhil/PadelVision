@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from conftest import project
 
-from padelvision.events import detect_events, detect_rallies
+from padelvision.events import activity_segments, detect_events, detect_rallies
 
 FPS = 30.0
 
@@ -23,6 +23,15 @@ def _players(rows):
 NO_PLAYERS = _players([])
 
 
+def _shot(u0, v0):
+    """Ball arrives at (u0, v0) at frame 6 and is sent away up the image (toward the far court)."""
+    k = np.arange(31) - 6
+    return [
+        (i, u0 + 8 * d, v0 + 6 * d) if d < 0 else (i, u0 - 4 * d, v0 - 14 * d)
+        for i, d in enumerate(k)
+    ]
+
+
 def test_floor_bounce_gets_court_position(cal):
     u0, v0 = project([(1.5, -4.0)])[0]
     pts = [(i, u0 + 3 * (i - 6), v0 - 5 * abs(i - 6)) for i in range(13)]
@@ -39,9 +48,9 @@ def test_smooth_lob_apex_is_not_an_event(cal):
 
 
 def test_hit_needs_ball_size_matching_player_depth(cal):
-    # Ball comes in and is sent back at (500, 450), inside a near player's large box.
-    pts = [(i, 500 + 8 * (i - 6) * (1 if i < 6 else -1), 450 + 6 * (i - 6)) for i in range(13)]
-    near_player = _players([(f, 2, "near", 460, 400, 560, 700) for f in range(13)])  # 300 px tall
+    # Ball comes in and is sent away at (500, 450), inside a near player's large box.
+    pts = _shot(500, 450)
+    near_player = _players([(f, 2, "near", 460, 400, 560, 700) for f in range(31)])  # 300 px tall
     at_racket = detect_events(_ball(pts, size=25.0), near_player, cal, FPS)  # expected ~26 px
     assert list(at_racket.kind) == ["hit"] and at_racket.player.iloc[0] == 2
     behind = detect_events(_ball(pts, size=10.0), near_player, cal, FPS)  # far ball behind him
@@ -59,21 +68,46 @@ def test_turn_at_tracklet_junction(cal):
     assert ev.frame.iloc[0] == 10
 
 
-def test_rallies_split_at_long_pauses(cal):
+def _events(rows):
+    """rows: (frame, kind, player, team, y_m)."""
+    return pd.DataFrame(rows, columns=["frame", "kind", "player", "team", "y_m"])
+
+
+def test_activity_splits_at_long_pauses_and_rallies_need_an_exchange(cal):
     rows = list(range(0, 120)) + list(range(200, 290)) + list(range(400, 420))  # 4 s, 3 s, 0.7 s
     ball = _ball([(f, 100 + f % 50, 300) for f in rows])
-    ev = pd.DataFrame(
-        [(30, "hit", 2), (60, "hit", 3), (230, "hit", 1)], columns=["frame", "kind", "player"]
-    )
+    ev = _events([
+        (30, "hit", 2, "near", np.nan), (60, "hit", 3, "far", np.nan),
+        (230, "hit", 1, "near", np.nan), (250, "handling", 1, "near", np.nan),
+    ])  # fmt: skip
+    segments = activity_segments(ball, ev, FPS)
+    assert [s["start_frame"] for s in segments] == [0, 200]  # the 0.7 s burst is too short
+    assert segments[0]["hits"] == 2 and segments[0]["hits_by_player"] == {"2": 1, "3": 1}
+    assert segments[1]["handling"] == 1
     rallies = detect_rallies(ball, ev, FPS)
-    assert [r["start_frame"] for r in rallies] == [0, 200]  # the 0.7 s burst is too short
-    assert rallies[0]["hits"] == 2 and rallies[0]["hits_by_player"] == {"2": 1, "3": 1}
+    assert [r["id"] for r in rallies] == [1]  # one near-side hit alone is not a rally
+
+
+def test_hit_then_bounce_on_the_other_side_is_an_exchange(cal):
+    ball = _ball([(f, 100 + f % 50, 300) for f in range(120)])
+    over = _events([(30, "hit", 1, "near", np.nan), (50, "bounce", None, None, 4.0)])
+    same_side = _events([(30, "hit", 1, "near", np.nan), (50, "bounce", None, None, -4.0)])
+    assert len(detect_rallies(ball, over, FPS)) == 1
+    assert detect_rallies(ball, same_side, FPS) == []
+
+
+def test_ball_handling_is_not_a_hit(cal):
+    # The player bounces the ball on the floor and racket beside him: it never goes far.
+    pts = [(i, 520 + 0.5 * i, 600 - 150 * abs(((i / 16) % 1) * 2 - 1)) for i in range(64)]
+    player = _players([(f, 2, "near", 460, 400, 560, 700) for f in range(64)])  # 300 px tall
+    ev = detect_events(_ball(pts, size=25.0), player, cal, FPS)
+    assert "handling" in set(ev.kind) and "hit" not in set(ev.kind)
 
 
 def test_best_depth_match_gets_the_hit(cal):
     # The ball turns where a near player's big box and a far player's small box overlap in 2-D.
-    pts = [(i, 500 + 8 * (i - 6) * (1 if i < 6 else -1), 420 + 4 * (i - 6)) for i in range(13)]
-    boxes = [(f, 2, "near", 440, 380, 560, 700) for f in range(13)]  # 320 px tall
-    boxes += [(f, 4, "far", 480, 390, 520, 450) for f in range(13)]  # 60 px tall
+    pts = _shot(500, 420)
+    boxes = [(f, 2, "near", 440, 380, 560, 700) for f in range(31)]  # 320 px tall
+    boxes += [(f, 4, "far", 480, 390, 520, 450) for f in range(31)]  # 60 px tall
     ev = detect_events(_ball(pts, size=10.5), _players(boxes), cal, FPS)  # far-ball size
     assert list(ev.kind) == ["hit"] and ev.player.iloc[0] == 4

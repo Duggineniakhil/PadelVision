@@ -28,11 +28,16 @@ Result: the trained `ball-detector` (manifest; GitHub release `ball-yolo11s-v1`;
 `docs/models/padel_ball_yolo11s.md`) scores F1 0.79 on held-out blocks (conf >= 0.10).
 Stage 4 (`ball/track.py`, notebook 05) is done: on Test_video the ball in play is found on 55-57% of frames,
 98% of reviewed tracked positions are real balls, and 75% of motion-found moving balls are tracked within 10 px.
-When two balls move at once it can follow the wrong (real) ball: rally context in phase 3 should fix that.
+When two balls move at once it used to flip between them (balls on the next court are seen through the side
+fence, so a 2-D court mask can't drop them). The tracker now keeps the current ball and only switches to a ball
+it could have reached (80 px/frame since last seen): impossible jumps went 69 -> 9, coverage 57% -> 53%.
 Phase 3 (stage 5, `events.py`) in progress: sharp turns of the ball's image path (inside tracklets and at
 tracklet junctions) classified as hit (ball in a player's reach zone AND ball size consistent with that
-player's depth: a low camera puts far balls inside near players' boxes), floor bounce (down then up the
-image; gets a court position) or wall. Ball detections now carry `size` (min box side, px). `web/` and `api/` don't exist yet. Don't invent commands
+player's depth: a low camera puts far balls inside near players' boxes), handling (a "hit" after which the
+ball stays near the player: bouncing it between points; Test_video has long stretches of this), floor bounce
+(down then up the image; gets a court position) or wall. A rally needs an exchange (hits by both teams, or a
+hit then a bounce on the other side); other ball activity goes to `other_activity` in `rallies.json`.
+Ball detections now carry `size` (min box side, px). `web/` and `api/` don't exist yet. Don't invent commands
 for tooling that hasn't been set up; add them here once they exist.
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),

@@ -71,3 +71,15 @@ def test_link_assigns_every_detection_once():
     tracklets = link(_dets(rows))
     assert sum(len(t.frames) for t in tracklets) == 30
     assert len(tracklets) == 2
+
+
+def test_ball_in_play_does_not_jump_to_a_ball_it_could_not_reach():
+    # The ball in play breaks into two tracklets (a 7-frame gap at a hit); meanwhile a ball on
+    # another court moves on the far side of the image the whole time.
+    a = _flight(0, 30, 100, 300, 8, 0, g=0, conf=0.7)
+    a2 = _flight(37, 24, 396, 300, 8, 0, g=0, conf=0.7)
+    other = _flight(0, 61, 1100, 300, -3, 0, g=0, conf=0.3)
+    ball, stats = track_ball(_dets(a + a2 + other), FPS)
+    assert stats["tracklets"]["moving"] == 3
+    assert (ball.u < 700).all()  # never switches to the other ball
+    assert not ball.frame.between(30, 36).any()  # the gap stays empty

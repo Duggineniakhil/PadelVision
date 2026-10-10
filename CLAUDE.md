@@ -70,12 +70,16 @@ padelvision render <video> --run runs/match1 --start 0 --seconds 30
 padelvision ball-bootstrap <video> --run runs/match1          # classical candidates + pseudo-labels
 padelvision ball-review-pack <video> --run runs/match1 --out ball_review
 padelvision ball-track <video> --run runs/match1               # stage 4: ball in play (ml/notebooks/05)
+padelvision event-review-pack <video> --run runs/match1 --out event_review   # frames to label hits/bounces in
 # Local: label the downloaded review pack (Y = ring on ball, click = ball, N = none, M = motion view)
 .venv/Scripts/padelvision label-ball data/ball_review
 # Local again: redo stages 3-7 from a downloaded Kaggle run folder (no video/GPU needed)
 .venv/Scripts/padelvision restats data/runs/match1 [--court other_court.json]
 .venv/Scripts/padelvision ball-retrack data/runs/match1   # redo ball tracking from cached ball detections
 .venv/Scripts/padelvision events data/runs/match1         # stage 5: hits/bounces/rallies (ml/notebooks/06)
+# Local: label every hit/bounce in the pack's windows (A/D step, H hit, B bounce, V window done), then score
+.venv/Scripts/padelvision label-events data/event_review
+.venv/Scripts/padelvision events-eval data/runs/match1 --labels ml/eval/labels/Test_video_events.csv
 ```
 To tune identity or stats logic, ask for the run folder (`detections.parquet`, `video.json`,
 `stats.json`) from Kaggle and iterate locally with `restats`. Don't send the developer back to

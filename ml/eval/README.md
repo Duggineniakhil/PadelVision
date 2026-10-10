@@ -20,10 +20,22 @@ clip01/
 - Label the ball centre in pixels. Mark `visible=0` instead of guessing a hidden ball.
 - Use CVAT or Label Studio and export to these CSVs (a converter script comes in phase 1).
 
+## Hit / bounce labels (phase 3)
+Made with `padelvision label-events` on a pack from `event-review-pack` (notebook 06), then copied here:
+```
+<video stem>_events.csv            frame,kind,u,v,player   kind = hit | bounce | wall (walls optional)
+<video stem>_events_windows.json   [{"id", "start", "end"}]  windows labelled exhaustively
+```
+- Windows: every rally, other activity with a hit, and a few random windows (so missed play is covered too).
+- Inside a finished window every hit and floor bounce is marked: no mark = no event. Only predictions inside
+  finished windows are scored (`padelvision events-eval`, match within 0.2 s, same kind).
+- A hit is a real shot (serves included). Bouncing the ball between points or tapping it to a partner is not.
+- Hit `player` is the slot id 1-4 (1-2 near, 3-4 far), as in `players.parquet`.
+
 ## Metrics (scripts arrive with each phase)
 | Metric | Target | Phase |
 |---|---|---|
 | Court reprojection error | < 15 cm | 1 |
 | Player ID switches | < 2 per minute | 1 |
 | Ball recall / precision (within 10 px) | ≥ 80% / ≥ 90% | 2 |
-| Hit / bounce F1 | TBD | 3 |
+| Hit / bounce F1 (within 0.2 s) | TBD after the first labels | 3 |

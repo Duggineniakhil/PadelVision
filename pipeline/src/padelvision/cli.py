@@ -101,6 +101,45 @@ def _cmd_events(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_event_review_pack(args: argparse.Namespace) -> int:
+    from padelvision.events_review import make_event_pack
+
+    make_event_pack(args.video, args.run, args.out, args.n_random, args.max_seconds)
+    return 0
+
+
+def _cmd_label_events(args: argparse.Namespace) -> int:
+    from padelvision.events_label_tool import run
+
+    run(args.pack)
+    return 0
+
+
+def _cmd_events_eval(args: argparse.Namespace) -> int:
+    import json
+    from pathlib import Path
+
+    import pandas as pd
+
+    from padelvision.events_eval import load_labels, score_events
+
+    run_dir = Path(args.run)
+    fps = json.loads((run_dir / "video.json").read_text())["fps"]
+    labels, windows = load_labels(args.labels, args.windows)
+    kinds = ("hit", "bounce", "wall") if args.walls else ("hit", "bounce")
+    pred = pd.read_parquet(run_dir / "events.parquet")
+    result = score_events(pred, labels, windows, fps, kinds)
+    (run_dir / "events_eval.json").write_text(json.dumps(result, indent=2))
+    print(f"{result['windows']} windows, {result.get('labelled_s', 0)} s labelled")
+    for kind in kinds:
+        r = result.get(kind)
+        if r:
+            extra = {k: r[k] for k in ("player_accuracy", "median_px_error") if k in r}
+            print(f"  {kind:6s} labelled {r['labelled']:3d}  predicted {r['predicted']:3d}  "
+                  f"P {r['precision']}  R {r['recall']}  F1 {r['f1']}  {extra}")  # fmt: skip
+    return 0
+
+
 def _cmd_render(args: argparse.Namespace) -> int:
     from pathlib import Path
 
@@ -193,6 +232,25 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("events", help="stage 5: hits, bounces, rallies from a run folder (local)")
     p.add_argument("run")
     p.set_defaults(func=_cmd_events)
+
+    p = sub.add_parser("event-review-pack", help="frames of windows to label hits/bounces in")
+    p.add_argument("video")
+    p.add_argument("--run", required=True, help="run folder with rallies.json")
+    p.add_argument("--out", required=True)
+    p.add_argument("--n-random", type=int, default=3, help="random windows outside activity")
+    p.add_argument("--max-seconds", type=float, default=120.0, help="total labelling time")
+    p.set_defaults(func=_cmd_event_review_pack)
+
+    p = sub.add_parser("label-events", help="label hits/bounces in an event pack (local, GUI)")
+    p.add_argument("pack", help="event review pack folder with pack.json")
+    p.set_defaults(func=_cmd_label_events)
+
+    p = sub.add_parser("events-eval", help="score events.parquet against hit/bounce labels")
+    p.add_argument("run", help="run folder with events.parquet + video.json")
+    p.add_argument("--labels", required=True, help="labels CSV from label-events")
+    p.add_argument("--windows", default=None, help="default: <labels stem>_windows.json")
+    p.add_argument("--walls", action="store_true", help="also score wall rebounds")
+    p.set_defaults(func=_cmd_events_eval)
 
     p = sub.add_parser("render", help="annotated preview video from a run folder")
     p.add_argument("video")

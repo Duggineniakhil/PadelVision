@@ -14,7 +14,7 @@ runs/<name>/
   ball_detections.json     stage 4  settings the cache was made with
   ball.parquet             stage 4  ball in play per frame (image px; detected / interpolated)
   ball_stats.json          stage 4  tracking summary
-  events.parquet           stage 5  hits / handling / floor bounces (with court position) / walls
+  events.parquet           stage 5  hits / handling / floor bounces (with court position) / turns
   rallies.json             stage 5  rallies (segments with an exchange) + other ball activity
                                     + rally stats (counts, placement, shot speed estimate)
   placement.png            stage 7  where each team's shots landed
@@ -217,14 +217,20 @@ def events(run_dir: str | Path) -> dict:
     ev.to_parquet(out / "events.parquet")
     segments = activity_segments(ball, ev, fps)
     rallies = [s for s in segments if s["exchange"]]
+    in_rally = ev.frame.apply(
+        lambda f: any(r["start_frame"] <= f <= r["end_frame"] for r in rallies)
+    )
+    rally_hits = ev[(ev.kind == "hit") & in_rally]
     bounces = ev[ev.kind == "bounce"]
     summary = {
         "events": {k: int(v) for k, v in ev.kind.value_counts().items()},
         "ball_size_known": bool(ball["size"].notna().any()) if "size" in ball else False,
         "bounces_in_court": int(bounces.in_court.eq(True).sum()),
+        # hits inside rallies only: outside them "hits" are mostly ball handling we missed
         "hits_by_player": {
-            str(int(k)): int(v) for k, v in ev[ev.kind == "hit"].player.value_counts().items()
+            str(int(k)): int(v) for k, v in rally_hits.player.value_counts().items()
         },
+        "hits_outside_rallies": int((ev.kind == "hit").sum() - len(rally_hits)),
         "rallies": rallies,
         # ball activity without an exchange (handling, warm-up, or no hit seen): not rallies
         "other_activity": [s for s in segments if not s["exchange"]],

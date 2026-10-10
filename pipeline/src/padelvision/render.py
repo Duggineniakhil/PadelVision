@@ -109,7 +109,8 @@ def _draw_ball(img, ball_at: dict, frame: int) -> None:
 
 
 EVENT_SHOW_S = 0.5  # an event stays marked this long
-EVENT_STYLE = {"hit": (0, 0, 255), "bounce": (0, 220, 0)}  # BGR; walls/handling not shown
+# BGR; ball handling and unclassified turns are not drawn
+EVENT_STYLE = {"hit": (0, 0, 255), "bounce": (0, 220, 0)}
 
 
 def _draw_events(img, canvas, mini: MiniCourt, recent: pd.DataFrame) -> None:

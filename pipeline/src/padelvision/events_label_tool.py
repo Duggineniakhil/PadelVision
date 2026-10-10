@@ -7,7 +7,7 @@ Step through each window and mark EVERY hit and floor bounce:
 - hit:    the frame where the racket meets the ball on a real shot (serves too). Not ball
           handling: bouncing the ball between points or tapping it to a partner.
 - bounce: the frame where the ball touches the floor (any floor bounce, in or out).
-- wall:   optional; glass/fence rebounds.
+- wall:   optional; glass/fence rebounds (kept for later, not scored yet).
 Click the ball first (optional: without a click the tracked ball position is used), then
 press H / B / G. A hit is given to the nearest player box; press 1-4 to correct it.
 When a window is complete, press V: only finished windows are used for scoring, and in a

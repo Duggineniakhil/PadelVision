@@ -1,4 +1,4 @@
-"""Stage 5: ball events (hits, floor bounces, wall rebounds) and rallies (pure Python).
+"""Stage 5: ball events (hits, ball handling, floor bounces) and rallies (pure Python).
 
 Inputs: ball.parquet (stage 4: ball in play, image px, one row per frame, tracklet ids),
 players.parquet (stage 3: player boxes), and the court calibration.
@@ -25,7 +25,9 @@ Each turn is classified:
             the ball more than LEAVE_REACH box heights away within HANDLING_WINDOW_S. If the
             ball is mostly unseen in that window, it stays a hit.
 - "bounce": the ball was moving down the image and then up (floor bounce)
-- "wall":   any other sharp turn (glass rebounds, net cord, a hit we can't attribute)
+- "turn":   any other sharp turn, unclassified: glass rebounds, net cord, a hit we couldn't
+            attribute, tracking noise. A visual check found none of 6 such turns was a
+            clean wall rebound, so they are kept for review but used in no statistic.
 
 Only bounces get a court position: the ball is on the ground there, so the homography is
 valid. Ball activity is split into segments at pauses in the ball track > RALLY_GAP_S, and
@@ -100,7 +102,7 @@ def detect_events(
         elif tr["dv_in"] > 0 and tr["dv_out"] < 0:
             kind = "bounce"
         else:
-            kind = "wall"
+            kind = "turn"
         x = y = np.nan
         in_court = None
         if kind == "bounce":
@@ -166,7 +168,7 @@ def activity_segments(ball: pd.DataFrame, events: pd.DataFrame, fps: float) -> l
             "hits": int(len(hits)),
             "handling": int((ev.kind == "handling").sum()),
             "bounces": int((ev.kind == "bounce").sum()),
-            "walls": int((ev.kind == "wall").sum()),
+            "turns": int((ev.kind == "turn").sum()),
             "hits_by_player": {str(int(k)): int(v) for k, v in hits.player.value_counts().items()},
         })  # fmt: skip
     return segments

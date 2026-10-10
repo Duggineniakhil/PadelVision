@@ -126,7 +126,7 @@ def _cmd_events_eval(args: argparse.Namespace) -> int:
     run_dir = Path(args.run)
     fps = json.loads((run_dir / "video.json").read_text())["fps"]
     labels, windows = load_labels(args.labels, args.windows)
-    kinds = ("hit", "bounce", "wall") if args.walls else ("hit", "bounce")
+    kinds = ("hit", "bounce")
     pred = pd.read_parquet(run_dir / "events.parquet")
     result = score_events(pred, labels, windows, fps, kinds)
     (run_dir / "events_eval.json").write_text(json.dumps(result, indent=2))
@@ -253,7 +253,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("run", help="run folder with events.parquet + video.json")
     p.add_argument("--labels", required=True, help="labels CSV from label-events")
     p.add_argument("--windows", default=None, help="default: <labels stem>_windows.json")
-    p.add_argument("--walls", action="store_true", help="also score wall rebounds")
     p.set_defaults(func=_cmd_events_eval)
 
     p = sub.add_parser("render", help="annotated preview video from a run folder")

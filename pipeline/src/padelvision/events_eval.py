@@ -1,13 +1,13 @@
 """Score detected events (events.parquet) against hand labels from `label-events`.
 
 Labels: CSV with frame, kind ("hit" | "bounce" | "wall"), u, v, player (hits; may be empty).
+Walls are not scored: the pipeline doesn't classify them (its unclassified sharp turns are "turn").
 Windows: JSON list of {"start", "end"} frame ranges that were labelled exhaustively. Only
 predictions inside these windows are scored, and a labelled window with no mark at a frame
 means there was no event there.
 
 A prediction matches an unmatched label of the same kind within TOL_S (closest first).
-Walls are only scored if asked: they are optional when labelling. "handling" predictions
-are not hits, so they never count, right or wrong.
+"handling" and "turn" predictions are not hits or bounces, so they never count, right or wrong.
 """
 
 from __future__ import annotations

@@ -10,49 +10,40 @@ it over wholesale. The full plan, phases and model strategy are in `docs/V2_PLAN
 it before starting larger work.
 
 ## Status
-Phases 0–1 are done. Player analytics has been validated on the developer's Test_video: bystander
-filtering, identity gating and Kalman smoothing were tuned on real detections.
-Phase 2 (ball) is in progress. The label bootstrap is built (`ball/candidates.py`, `ball/link.py`,
-`ball/bootstrap.py`, `ball/label_tool.py`, notebook `02_ball_bootstrap.ipynb`). The pseudo-label track
-filter was tuned on hand-checked crops (precision ~85%). Eval labels are in `ml/eval/labels/` (93 visually
-confirmed balls; unlabelled frames are *unverified*, not "no ball"; new balls are added by pooled crop review).
-Next is the pretrained-detector comparison (`03_ball_bakeoff.ipynb`, `ball/evaluate.py`,
-`models/ball_detectors.py`: COCO sports ball, V1 padel YOLO, TrackNet, Roboflow Universe models via a
-Kaggle secret `ROBOFLOW_API_KEY`). Bake-off result with pooled labels (207 balls, 401 non-ball spots):
-Roboflow `padel-ball-detection-nazbq/4` F1 0.68 > COCO sports ball 0.60 > others. Hosted models are
-too costly per frame, so we train our own: `04_train_ball.ipynb` + `ball/dataset.py` fine-tune YOLO11s on our
-pseudo-labels (`ml/datasets/Test_video_ball_pseudo.csv`) plus Universe datasets downloaded inside Kaggle.
-Train/test split: 20 s blocks (odd blocks = test, 2 s margin) to avoid near-duplicate leakage. The session has
-several balls on court (spares, balls in hand), so the tracker must pick the ball in play (motion).
-Result: the trained `ball-detector` (manifest; GitHub release `ball-yolo11s-v1`; card in
-`docs/models/padel_ball_yolo11s.md`) scores F1 0.79 on held-out blocks (conf >= 0.10).
-Stage 4 (`ball/track.py`, notebook 05) is done: on Test_video the ball in play is found on 55-57% of frames,
-98% of reviewed tracked positions are real balls, and 75% of motion-found moving balls are tracked within 10 px.
-When two balls move at once it used to flip between them (balls on the next court are seen through the side
-fence, so a 2-D court mask can't drop them). The tracker now keeps the current ball and only switches to a ball
-it could have reached (80 px/frame since last seen): impossible jumps went 69 -> 9, coverage 57% -> 53%.
-Phase 3 (stage 5, `events.py`) in progress: sharp turns of the ball's image path (inside tracklets and at
-tracklet junctions) classified as hit (ball in a player's reach zone AND ball size consistent with that
-player's depth: a low camera puts far balls inside near players' boxes), handling (a "hit" after which the
-ball stays near the player: bouncing it between points; Test_video has long stretches of this), floor bounce
-(down then up the image; gets a court position) or wall. Activity is split at ball-track pauses > 2 s and at
-> 4 s without a hit, then trimmed to 1 s before the first hit / 2 s after the last. A rally needs an exchange
-(hits by both teams, or a hit then an in-court bounce on the other side); the rest goes to `other_activity`
-in `rallies.json`. A turn right after the other team's hit is a return (always a hit: far shots barely move in
-the image), and same-player turns within 0.35 s are one contact. Visual precision check of the predicted events
-(`ml/eval/labels/Test_video_events_reviewed.csv`, precision only): hits inside rallies 17/17 real (+1 unclear);
-the remaining false hits are ball tapping outside rallies; bounces 9/11 decided; walls ~0/6 (unreliable).
-Recall still needs human `label-events` labels. Rally stats (`analytics/rallies.py`) go into `rallies.json["stats"]` (not
-stats.json, which `restats` rewrites): rally counts/lengths, hits per player/team, placement of each team's shots
-(`placement.png`), and a shot speed ESTIMATE (hitter's feet -> landing bounce on the other side / time; a lower
-bound, null below 3 shots). Test_video: 6 measured shots, median ~48 km/h. `render` draws hits/bounces + rally banner. Test_video: 4 rallies (8.0-12.9, 31.7-48.4, 67.2-74.0, 136.3-141.9 s).
-Ball detections now carry `size` (min box side, px). `web/` and `api/` don't exist yet. Don't invent commands
-for tooling that hasn't been set up; add them here once they exist.
+Phases 0-3 are built; phase 4 (web app) is deferred. Everything is tuned and measured on one video, the
+developer's Test_video (206 s, mostly warm-up and ball handling, 4 short rallies). Current numbers and gaps are
+in `ml/eval/README.md`; open items: court error 32 cm (target < 15 cm), player ID switches unmeasured, ball
+detector below target, hit/bounce recall unmeasured (needs human `label-events` labels), a second video.
+
+- Players (stages 2-3, 6-7): bystander filtering, identity gating and Kalman smoothing tuned on real detections.
+- Ball detector: own YOLO11s (`ball-detector` in the manifest, GitHub release `ball-yolo11s-v1`, card
+  `docs/models/padel_ball_yolo11s.md`), fine-tuned on Test_video pseudo-labels + Roboflow Universe data
+  (`04_train_ball.ipynb`, `ball/dataset.py`); held-out 20 s blocks: recall 0.74, precision 0.85 (conf >= 0.10).
+  Pooled eval labels in `ml/eval/labels/` (unlabelled spots are *unverified*, not wrong). Detections carry `size`.
+- Ball in play (stage 4, `ball/track.py`): several balls are often in view (spares, balls in hand, the next
+  court seen through the side fence, so a 2-D court mask can't drop them). The tracker keeps its ball and only
+  switches to one it could have reached (80 px/frame since last seen). Found on 53% of frames.
+- Events (stage 5, `events.py`): sharp turns of the ball's image path -> hit (ball in a player's reach zone AND
+  ball size fits that player's depth; a turn right after the other team's hit is always a hit, a return; same-player
+  turns within 0.35 s are one contact), handling (ball stays near the player: bouncing it between points),
+  floor bounce (gets a court position) or turn (unclassified; walls were unreliable; used in no statistic).
+  Activity splits at ball pauses > 2 s and > 4 s without a hit, trimmed to the hits; a rally needs an exchange
+  (both teams hit, or a hit then an in-court bounce on the other side). `rallies.json` holds rallies,
+  `other_activity` and `stats` (`analytics/rallies.py`: counts, hits per player/team, placement ->
+  `placement.png`, shot speed ESTIMATE = hitter's feet -> landing bounce / time, a lower bound, null below 3
+  shots). Rally stats live there, not in stats.json (`restats` rewrites that). `render` draws hits, bounces and a
+  rally banner. Test_video: 4 rallies, 18 rally hits (visual review: 17 real, 1 unclear), median shot ~48 km/h.
+- Eval tooling: `event-review-pack` (Kaggle) -> `label-events` (local GUI) -> `events-eval`.
+
+`web/` and `api/` don't exist yet. Don't invent commands for tooling that hasn't been set up; add them here
+once they exist.
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),
 `models/` (manifest registry, `person_tracker.py`, the only ultralytics import), `players/`
-(stage 2 detection, stage 3 on-court filtering + identities), `analytics/movement.py` (stage 6),
-`visuals.py` (heatmaps), `render.py` (preview video), `run.py` (`analyze` orchestration).
+(stage 2 detection, stage 3 on-court filtering + identities), `ball/` (bootstrap, labelling, evaluation,
+dataset, stage 4 tracking), `events.py` (stage 5), `analytics/movement.py` + `analytics/rallies.py` (stage 6),
+`visuals.py` (heatmaps, placement map), `render.py` (preview video), `events_review.py` /
+`events_label_tool.py` / `events_eval.py` (hit/bounce labelling + scoring), `run.py` (stage orchestration).
 The tuning constants (smoothing windows, speed caps, zones, margins) sit at the top of each module.
 
 Calibration notes: the lens uses a **division model** (the polynomial model couldn't straighten

@@ -157,3 +157,13 @@ def test_two_turns_of_one_contact_are_one_hit(cal):
     ev = detect_events(_ball(pts, size=27.0), player, cal, FPS)
     contacts = ev[ev.kind.isin(["hit", "handling"])]
     assert list(contacts.kind) == ["hit"] and contacts.frame.iloc[0] == 18
+
+
+def test_far_player_hit_with_ball_at_the_detector_floor(cal):
+    # A far player (70 px box: expected ~11.7 px) hits a ball the detector reports at 7.5 px.
+    pts = _shot(500, 300)
+    far = _players([(f, 4, "far", 470, 260, 530, 330) for f in range(31)])
+    ev = detect_events(_ball(pts, size=7.5), far, cal, FPS)
+    assert list(ev.kind) == ["hit"] and ev.player.iloc[0] == 4
+    near = _players([(f, 2, "near", 440, 250, 560, 330) for f in range(31)])  # same box, near team
+    assert "hit" not in set(detect_events(_ball(pts, size=7.5), near, cal, FPS).kind)

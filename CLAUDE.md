@@ -13,7 +13,11 @@ it before starting larger work.
 Phases 0-3 are built; phase 4 (web app) is deferred. Everything is tuned and measured on one video, the
 developer's Test_video (206 s, mostly warm-up and ball handling, 4 short rallies). Current numbers and gaps are
 in `ml/eval/README.md`; open items: ball
-detector below target, hit/bounce recall unmeasured (needs human `label-events` labels), a second video.
+detector below target, hit/bounce recall unmeasured (needs human `label-events` labels).
+Second video GX010012 (19 min match, notebook 08, 2026-10-11): players tracked 85-87%, but the ball detector finds
+the real ball on only ~33% of frames (91% of frames hold only fixed false spots: lights, spare balls, the camera
+mount; masking them changed nothing), so only 34 rally fragments (165 s, 2.2 hits each) are found. The fix is
+retraining the ball detector with this court; tracker rules can't recover undetected balls.
 
 - Players (stages 2-3, 6-7): bystander filtering, identity gating and Kalman smoothing tuned on real detections.
   Visual ID check (94 s): 0 switches; all 12 tracker-id changes were the same person picked up again.
@@ -26,7 +30,7 @@ detector below target, hit/bounce recall unmeasured (needs human `label-events` 
   switches to one it could have reached (80 px/frame since last seen). Found on 53% of frames.
 - Events (stage 5, `events.py`): sharp turns of the ball's image path -> hit (ball in a player's reach zone AND
   ball size fits that player's depth; a turn right after the other team's hit is always a hit, a return; same-player
-  turns within 0.35 s are one contact), handling (ball stays near the player: bouncing it between points),
+  turns within 0.35 s are one contact; far players may hit balls down to the detector's ~7 px floor), handling (ball stays near the player: bouncing it between points),
   floor bounce (gets a court position) or turn (unclassified; walls were unreliable; used in no statistic).
   Activity splits at ball pauses > 2 s and > 4 s without a hit, trimmed to the hits; a rally needs an exchange
   (both teams hit, or a hit then an in-court bounce on the other side). `rallies.json` holds rallies,

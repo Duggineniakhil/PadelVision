@@ -60,6 +60,10 @@ BOUNCE_COURT_MARGIN_M = 0.5
 # seen inside a near player's box come out at ~0.53. Re-fit for another camera or detector.
 BALL_SIZE_AT_PLAYER = (7.28, 0.0625)
 SIZE_MATCH_TOL = 1.43  # accept actual/expected within [1/1.43, 1.43] = [0.70, 1.43]
+# For far players nothing farther away can sit in their reach zone, so a ball may be as small as
+# the detector reports anything (its boxes bottom out at ~7 px): GX010012's far hits were 7-8 px
+# where the near-camera fit expects ~11 px. Near players keep the full check.
+FAR_MIN_BALL_PX = 6.5
 # Ball handling vs a shot, tuned on Test_video: after the dribbles in rallies 4/7 the ball stays
 # within ~0.35 box heights of the player; shots carry it 0.5-10 box heights away.
 HANDLING_WINDOW_S = 0.6
@@ -333,8 +337,12 @@ def _reaching_player(boxes: pd.DataFrame | None, u: float, v: float, size: float
     )  # fmt: skip
     if np.isfinite(size) and size > 0:
         a, b = BALL_SIZE_AT_PLAYER
-        mismatch = np.abs(np.log(size / (a + b * h)))
-        inside &= mismatch <= np.log(SIZE_MATCH_TOL)
+        expected = a + b * h
+        mismatch = np.abs(np.log(size / expected))
+        ok = mismatch <= np.log(SIZE_MATCH_TOL)
+        if "team" in boxes:  # far player, ball smaller than expected but at the detector floor
+            ok |= (boxes.team == "far") & (size >= FAR_MIN_BALL_PX) & (size <= expected)
+        inside &= ok
         if not inside.any():
             return None, None
         best = boxes.loc[mismatch[inside].idxmin()]  # best depth match

@@ -152,6 +152,15 @@ export async function importRun(files: File[], name: string, onProgress?: (f: nu
   return run;
 }
 
+/** Replace a match's highlight videos and images with newer ones (zips from the notebooks). */
+export async function addFiles(id: string, files: File[], onProgress?: (f: number) => void) {
+  const form = new FormData();
+  files.forEach((f) => form.append("files", f));
+  const result = await upload<Schemas["FilesAdded"]>(`/api/runs/${id}/files`, form, onProgress);
+  refreshRun(id);
+  return result;
+}
+
 export async function uploadVideo(id: string, file: File, onProgress?: (f: number) => void) {
   const form = new FormData();
   form.append("file", file);

@@ -3,7 +3,8 @@
 import { useParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { HardDrive, Upload } from "lucide-react";
-import { attachVideoPath, uploadVideo, useRun } from "@/lib/api";
+import { addFiles, attachVideoPath, uploadVideo, useRun } from "@/lib/api";
+import { ZipDropzone } from "./dropzone";
 import { Button, Dialog, Field, cx, inputClass } from "./ui";
 
 /** The current match id from the URL and its data (shared by all match pages through SWR). */
@@ -118,6 +119,97 @@ export function AttachVideoDialog({ open, onClose }: { open: boolean; onClose: (
         )}
       </div>
       {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+    </Dialog>
+  );
+}
+
+const FILE_LABEL: Record<string, string> = {
+  "highlights.mp4": "Highlights video",
+  "highlights.json": "Highlights clip list",
+  "condensed.mp4": "Condensed match",
+  "condensed.json": "Condensed match clip list",
+  "heatmaps.png": "Heatmaps image",
+  "placement.png": "Placement image",
+  "court_overlay.png": "Court overlay image",
+};
+
+/** Replace the match's highlight videos (and images) with newer ones from the notebooks. */
+export function AddHighlightsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { id } = useMatch();
+  const [files, setFiles] = useState<File[]>([]);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [updated, setUpdated] = useState<string[] | null>(null);
+  const close = () => {
+    if (progress !== null) return;
+    setFiles([]);
+    setError(null);
+    setUpdated(null);
+    onClose();
+  };
+  const submit = async () => {
+    setError(null);
+    setProgress(0);
+    try {
+      const r = await addFiles(id, files, setProgress);
+      setUpdated(r.updated);
+      setFiles([]);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setProgress(null);
+  };
+  return (
+    <Dialog
+      open={open}
+      onClose={close}
+      title="Update highlight videos"
+      footer={
+        updated ? (
+          <Button variant="primary" onClick={close}>
+            Done
+          </Button>
+        ) : (
+          <>
+            <Button onClick={close} disabled={progress !== null}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={submit} disabled={!files.length || progress !== null}>
+              {progress === null ? "Update" : progress < 1 ? `Uploading ${Math.round(progress * 100)}%` : "Saving…"}
+            </Button>
+          </>
+        )
+      }
+    >
+      {updated ? (
+        <div className="text-sm">
+          <p className="font-medium text-zinc-900">Updated</p>
+          <ul className="mt-2 space-y-1 text-zinc-600">
+            {updated.map((u) => (
+              <li key={u}>{FILE_LABEL[u] ?? u}</li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <>
+          <p className="text-sm text-zinc-600">
+            Add <span className="font-medium text-zinc-800">highlights.zip</span> from the highlights notebook or{" "}
+            <span className="font-medium text-zinc-800">results.zip</span> from the full-match notebook. The
+            highlight videos and images are replaced; the analysis itself stays as it is.
+          </p>
+          <div className="mt-4">
+            <ZipDropzone
+              files={files}
+              disabled={progress !== null}
+              onChange={(f, err) => {
+                setFiles(f);
+                setError(err);
+              }}
+            />
+          </div>
+          {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+        </>
+      )}
     </Dialog>
   );
 }

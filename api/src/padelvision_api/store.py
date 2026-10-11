@@ -30,6 +30,8 @@ RUN_FILES = {  # everything a run may contain (anything else in an imported zip 
 }  # fmt: skip
 MEDIA_FILES = {"highlights.mp4", "condensed.mp4", "heatmaps.png", "placement.png",
                "court_overlay.png"}  # fmt: skip
+# Files that can be replaced in an existing run (rendered outputs; the analysis stays as it is).
+UPDATABLE_FILES = MEDIA_FILES | {"highlights.json", "condensed.json"}
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
 ID_RE = re.compile(r"^[a-z0-9-]{1,64}$")
 
@@ -115,6 +117,39 @@ def import_run(uploads: list[tuple[str, Path]], name: str | None = None) -> str:
         shutil.rmtree(staging, ignore_errors=True)
     start_processing(run_id)
     return run_id
+
+
+def add_files(run_id: str, uploads: list[tuple[str, Path]]) -> list[str]:
+    """Replace rendered outputs (highlight videos, their clip lists, images) of an existing run
+    from notebook zips. Returns the names of the files updated."""
+    run = run_path(run_id)
+    staging = Path(tempfile.mkdtemp(prefix="pv-add-"))
+    try:
+        for filename, path in uploads:
+            if filename.lower().endswith(".zip"):
+                _extract_zip(path, staging / Path(filename).stem)
+            elif Path(filename).name in UPDATABLE_FILES:
+                shutil.copy(path, staging / Path(filename).name)
+        found = _collect_run_files(staging)
+        if "video.json" in found:  # same match? (zips from the notebooks carry it)
+            theirs = json.loads(found["video.json"].read_text())
+            ours = json.loads((run / "video.json").read_text())
+            if theirs.get("frame_count") != ours.get("frame_count"):
+                raise ImportFailed(
+                    f"These files belong to another video ({theirs.get('frame_count')} frames; "
+                    f"this match has {ours.get('frame_count')})."
+                )
+        updated = sorted(n for n in found if n in UPDATABLE_FILES)
+        if not updated:
+            raise ImportFailed(
+                "No highlight videos or images found. Add highlights.zip from notebook 07 or "
+                "results.zip from notebook 08."
+            )
+        for name in updated:
+            shutil.copy(found[name], run / name)
+        return updated
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
 
 
 def _extract_zip(zip_path: Path, dest: Path) -> None:

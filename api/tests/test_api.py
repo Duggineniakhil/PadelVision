@@ -141,3 +141,27 @@ def test_import_rejects_incomplete_and_unsafe_zips(client):
     r = client.post("/api/runs", files=[("files", ("evil.zip", buf.getvalue()))])
     assert r.status_code == 422 and "Unsafe" in r.json()["detail"]
     assert client.get("/api/runs").json() == []
+
+
+def test_add_highlight_files_to_an_existing_run(client):
+    run_id = _import(client).json()["id"]
+    _wait_ready(client, run_id)
+    clips = {"total_s": 12.0, "clips": [{"rally_id": 1, "start_s": 0.5, "end_s": 10.5,
+                                         "duration_s": 9.0, "hits": 3, "score": 5.0}]}  # fmt: skip
+    files = {"highlights.mp4": "fake video", "highlights.json": json.dumps(clips),
+             "rallies.json": "{}", "video.json": json.dumps(VIDEO)}  # fmt: skip
+    upload = [("files", ("highlights.zip", _zip(files, "highlights_out")))]
+    r = client.post(f"/api/runs/{run_id}/files", files=upload)
+    assert r.status_code == 200 and r.json() == {"updated": ["highlights.json", "highlights.mp4"]}
+    hl = client.get(f"/api/runs/{run_id}/highlights").json()["highlights"]
+    assert hl["file"] == "highlights.mp4" and hl["clips"][0]["rally_id"] == 1
+    assert client.get(f"/api/runs/{run_id}/rallies").json()["rallies"][0]["id"] == 1  # untouched
+
+    other = dict(VIDEO, frame_count=5000)
+    r = client.post(f"/api/runs/{run_id}/files", files=[("files", ("x.zip", _zip(
+        {"highlights.mp4": "v", "video.json": json.dumps(other)})))])  # fmt: skip
+    assert r.status_code == 422 and "another video" in r.json()["detail"]
+    r = client.post(
+        f"/api/runs/{run_id}/files", files=[("files", ("x.zip", _zip({"stats.json": "{}"})))]
+    )
+    assert r.status_code == 422 and "No highlight videos" in r.json()["detail"]

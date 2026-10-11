@@ -86,6 +86,20 @@ def delete_run(run_id: str) -> None:
     store.delete_run(run_id)
 
 
+@app.post("/api/runs/{run_id}/files", response_model=S.FilesAdded)
+def add_files(run_id: str, files: Annotated[list[UploadFile], File()]) -> S.FilesAdded:
+    """Replace a run's highlight videos and images with newer ones (e.g. notebook 07's zip)."""
+    _run(run_id)
+    tmp = Path(tempfile.mkdtemp(prefix="pv-upload-"))
+    try:
+        updated = store.add_files(run_id, _save_uploads(files, tmp))
+    except store.ImportFailed as e:
+        raise HTTPException(422, str(e)) from e
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return S.FilesAdded(updated=updated)
+
+
 @app.post("/api/runs/{run_id}/reprocess", response_model=S.RunListItem)
 def reprocess(run_id: str) -> S.RunListItem:
     run = _run(run_id)

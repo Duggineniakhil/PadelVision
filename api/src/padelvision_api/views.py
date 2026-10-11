@@ -299,7 +299,8 @@ def highlights(run: Path) -> S.HighlightsResponse:
         j = _json(run / f"{name}.json")
         if j and (run / f"{name}.mp4").exists():
             out[name] = S.HighlightsVideo(
-                file=f"{name}.mp4", total_s=j.get("total_s", 0.0),
+                file=f"{name}.mp4", version=int((run / f"{name}.mp4").stat().st_mtime),
+                total_s=j.get("total_s", 0.0),
                 clips=[S.Clip(**{k: c.get(k) for k in S.Clip.model_fields}) for c in j["clips"]],
             )  # fmt: skip
     return S.HighlightsResponse(**out)

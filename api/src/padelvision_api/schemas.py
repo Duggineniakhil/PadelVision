@@ -209,6 +209,7 @@ class Clip(BaseModel):
 
 class HighlightsVideo(BaseModel):
     file: str
+    version: int  # file modification time: changes when the video is replaced
     total_s: float
     clips: list[Clip]
 
@@ -216,6 +217,10 @@ class HighlightsVideo(BaseModel):
 class HighlightsResponse(BaseModel):
     highlights: HighlightsVideo | None = None
     condensed: HighlightsVideo | None = None
+
+
+class FilesAdded(BaseModel):
+    updated: list[str]
 
 
 class AttachVideo(BaseModel):

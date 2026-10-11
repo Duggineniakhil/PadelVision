@@ -180,6 +180,56 @@
     }
    }
   },
+  "/api/runs/{run_id}/files": {
+   "post": {
+    "summary": "Add Files",
+    "description": "Replace a run's highlight videos and images with newer ones (e.g. notebook 07's zip).",
+    "operationId": "add_files_api_runs__run_id__files_post",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_add_files_api_runs__run_id__files_post"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FilesAdded"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/runs/{run_id}/reprocess": {
    "post": {
     "summary": "Reprocess",
@@ -645,6 +695,23 @@
     ],
     "title": "AttachVideo"
    },
+   "Body_add_files_api_runs__run_id__files_post": {
+    "properties": {
+     "files": {
+      "items": {
+       "type": "string",
+       "contentMediaType": "application/octet-stream"
+      },
+      "type": "array",
+      "title": "Files"
+     }
+    },
+    "type": "object",
+    "required": [
+     "files"
+    ],
+    "title": "Body_add_files_api_runs__run_id__files_post"
+   },
    "Body_import_run_api_runs_post": {
     "properties": {
      "files": {
@@ -925,6 +992,22 @@
     ],
     "title": "Event"
    },
+   "FilesAdded": {
+    "properties": {
+     "updated": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Updated"
+     }
+    },
+    "type": "object",
+    "required": [
+     "updated"
+    ],
+    "title": "FilesAdded"
+   },
    "HTTPValidationError": {
     "properties": {
      "detail": {
@@ -970,6 +1053,10 @@
       "type": "string",
       "title": "File"
      },
+     "version": {
+      "type": "integer",
+      "title": "Version"
+     },
      "total_s": {
       "type": "number",
       "title": "Total S"
@@ -985,6 +1072,7 @@
     "type": "object",
     "required": [
      "file",
+     "version",
      "total_s",
      "clips"
     ],

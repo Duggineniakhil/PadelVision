@@ -2,11 +2,11 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Film } from "lucide-react";
+import { Download, Film, RefreshCw } from "lucide-react";
 import { fileUrl, useHighlights, type HighlightsVideo } from "@/lib/api";
 import { clock, duration, num } from "@/lib/format";
-import { useMatch } from "@/components/match";
-import { EmptyState, Skeleton, cx } from "@/components/ui";
+import { AddHighlightsDialog, useMatch } from "@/components/match";
+import { Button, EmptyState, Skeleton, cx } from "@/components/ui";
 
 const CARD_S = 3; // summary card after every clip (pipeline/src/padelvision/highlights.py)
 
@@ -29,16 +29,29 @@ function Highlights() {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const [addOpen, setAddOpen] = useState(false);
+  const dialog = <AddHighlightsDialog open={addOpen} onClose={() => setAddOpen(false)} />;
   if (!run) return null;
   if (!data) return <Skeleton className="aspect-video w-full" />;
 
   const available = VIDEOS.filter(([key]) => data[key]);
   if (!available.length)
     return (
-      <EmptyState icon={<Film className="size-8" />} title="No highlight videos for this match">
-        Highlight videos are rendered by the analysis notebook and included in <b>results.zip</b>. Import that
-        file to add them.
-      </EmptyState>
+      <>
+        <EmptyState
+          icon={<Film className="size-8" />}
+          title="No highlight videos for this match"
+          action={
+            <Button variant="primary" onClick={() => setAddOpen(true)}>
+              Add highlight videos
+            </Button>
+          }
+        >
+          Highlight videos are rendered by the analysis notebooks: <b>highlights.zip</b> (highlights notebook) or{" "}
+          <b>results.zip</b> (full-match notebook).
+        </EmptyState>
+        {dialog}
+      </>
     );
 
   const key = (params.get("video") as "highlights" | "condensed" | null) ?? available[0][0];
@@ -47,7 +60,8 @@ function Highlights() {
 
   return (
     <div>
-      <div className="mb-4 inline-flex rounded-md border border-zinc-200 bg-white p-0.5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="inline-flex rounded-md border border-zinc-200 bg-white p-0.5">
         {available.map(([k, label, sub]) => (
           <button
             key={k}
@@ -63,7 +77,12 @@ function Highlights() {
           </button>
         ))}
       </div>
-      <Player key={key} runId={id} video={current} initialClip={clip} />
+        <Button onClick={() => setAddOpen(true)}>
+          <RefreshCw className="size-4" /> Update videos
+        </Button>
+      </div>
+      <Player key={`${key}-${current.version}`} runId={id} video={current} initialClip={clip} />
+      {dialog}
     </div>
   );
 }
@@ -98,7 +117,7 @@ function Player({ runId, video, initialClip }: { runId: string; video: Highlight
     }
   }, [initialClip, starts]);
 
-  const src = fileUrl(runId, video.file);
+  const src = `${fileUrl(runId, video.file)}?v=${video.version}`;
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="overflow-hidden rounded-lg border border-zinc-200 bg-black">

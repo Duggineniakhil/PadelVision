@@ -44,6 +44,26 @@ export interface paths {
         patch: operations["rename_run_api_runs__run_id__patch"];
         trace?: never;
     };
+    "/api/runs/{run_id}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Files
+         * @description Replace a run's highlight videos and images with newer ones (e.g. notebook 07's zip).
+         */
+        post: operations["add_files_api_runs__run_id__files_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{run_id}/reprocess": {
         parameters: {
             query?: never;
@@ -197,6 +217,11 @@ export interface components {
             /** Path */
             path: string;
         };
+        /** Body_add_files_api_runs__run_id__files_post */
+        Body_add_files_api_runs__run_id__files_post: {
+            /** Files */
+            files: string[];
+        };
         /** Body_import_run_api_runs_post */
         Body_import_run_api_runs_post: {
             /** Files */
@@ -283,6 +308,11 @@ export interface components {
             /** In Court */
             in_court?: boolean | null;
         };
+        /** FilesAdded */
+        FilesAdded: {
+            /** Updated */
+            updated: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -297,6 +327,8 @@ export interface components {
         HighlightsVideo: {
             /** File */
             file: string;
+            /** Version */
+            version: number;
             /** Total S */
             total_s: number;
             /** Clips */
@@ -767,6 +799,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunListItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_files_api_runs__run_id__files_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_add_files_api_runs__run_id__files_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FilesAdded"];
                 };
             };
             /** @description Validation Error */

@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ChevronLeft, MoreHorizontal, Pencil, RotateCw, Trash2, Video } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Film, MoreHorizontal, Pencil, RotateCw, Trash2, Video } from "lucide-react";
 import { deleteRun, renameRun, reprocessRun, useRallies } from "@/lib/api";
 import { date, duration } from "@/lib/format";
-import { AttachVideoDialog, useMatch } from "./match";
+import { AddHighlightsDialog, AttachVideoDialog, useMatch } from "./match";
 import { Button, Dialog, EmptyState, Skeleton, Spinner, cx, inputClass } from "./ui";
 
 const TABS = [
@@ -23,6 +23,7 @@ export function MatchLayout({ children }: { children: ReactNode }) {
   const { data: rallies } = useRallies(id, ready);
   const pathname = usePathname();
   const [videoOpen, setVideoOpen] = useState(false);
+  const [highlightsOpen, setHighlightsOpen] = useState(false);
 
   useEffect(() => {
     if (run) document.title = `${run.name} · PadelVision`;
@@ -85,7 +86,13 @@ export function MatchLayout({ children }: { children: ReactNode }) {
               Add match video
             </Button>
           )}
-          <MatchMenu id={id} disabled={run.status === "processing"} onRename={() => document.getElementById("match-title")?.click()} />
+          <MatchMenu
+            id={id}
+            disabled={run.status === "processing"}
+            onRename={() => document.getElementById("match-title")?.click()}
+            onAddVideo={() => setVideoOpen(true)}
+            onUpdateHighlights={() => setHighlightsOpen(true)}
+          />
         </div>
       </div>
 
@@ -139,6 +146,7 @@ export function MatchLayout({ children }: { children: ReactNode }) {
         )}
       </div>
       <AttachVideoDialog open={videoOpen} onClose={() => setVideoOpen(false)} />
+      <AddHighlightsDialog open={highlightsOpen} onClose={() => setHighlightsOpen(false)} />
     </div>
   );
 }
@@ -185,7 +193,19 @@ function Title({ id, name }: { id: string; name: string }) {
   );
 }
 
-function MatchMenu({ id, disabled, onRename }: { id: string; disabled: boolean; onRename: () => void }) {
+function MatchMenu({
+  id,
+  disabled,
+  onRename,
+  onAddVideo,
+  onUpdateHighlights,
+}: {
+  id: string;
+  disabled: boolean;
+  onRename: () => void;
+  onAddVideo: () => void;
+  onUpdateHighlights: () => void;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -205,6 +225,20 @@ function MatchMenu({ id, disabled, onRename }: { id: string; disabled: boolean; 
         <div className="absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-md border border-zinc-200 bg-white py-1 shadow-lg">
           <button type="button" className={item} onClick={() => (setOpen(false), onRename())}>
             <Pencil className="size-4 text-zinc-500" /> Rename
+          </button>
+          <button
+            type="button"
+            className={cx(item, disabled && "pointer-events-none opacity-50")}
+            onClick={() => (setOpen(false), onAddVideo())}
+          >
+            <Video className="size-4 text-zinc-500" /> Add or replace match video
+          </button>
+          <button
+            type="button"
+            className={cx(item, disabled && "pointer-events-none opacity-50")}
+            onClick={() => (setOpen(false), onUpdateHighlights())}
+          >
+            <Film className="size-4 text-zinc-500" /> Update highlight videos
           </button>
           <button
             type="button"

@@ -90,8 +90,18 @@ def make_review_pack(
         else:
             prop = None
         items.append({"frame": f, "t": f / fps, "source": source, "proposal": prop})
-    items.sort(key=lambda it: it["frame"])
+    write_review_pack(video, items, out)
+    print(
+        f"review pack: {len(items)} frames ({len(pick_pseudo)} pseudo, {len(pick_random)} random)"
+    )
+    return out
 
+
+def write_review_pack(video, items: list[dict], out_dir) -> Path:
+    """Write a pack for `padelvision label-ball`: frames/, motion/ and pack.json.
+    `items`: {frame, t, source, proposal: [u, v] | None}; frames need both neighbours."""
+    out = Path(out_dir)
+    items = sorted(items, key=lambda it: it["frame"])
     (out / "frames").mkdir(parents=True, exist_ok=True)
     (out / "motion").mkdir(parents=True, exist_ok=True)
     wanted = {it["frame"] for it in items}
@@ -105,9 +115,6 @@ def make_review_pack(
         for old in [k for k in buf if k < f - 2]:
             del buf[old]
     (out / "pack.json").write_text(json.dumps({"video": str(video), "items": items}, indent=1))
-    print(
-        f"review pack: {len(items)} frames ({len(pick_pseudo)} pseudo, {len(pick_random)} random)"
-    )
     return out
 
 

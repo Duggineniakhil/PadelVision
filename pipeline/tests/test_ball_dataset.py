@@ -68,3 +68,21 @@ def test_import_without_ball_class_imports_nothing(tmp_path):
     (src / "train/labels").mkdir(parents=True)
     (src / "data.yaml").write_text(yaml.safe_dump({"names": {0: "player"}}))
     assert import_yolo_dataset(src, tmp_path / "ds", "rf")["images"] == 0
+
+
+def test_ball_size_by_row_and_merge():
+    import numpy as np
+    import pandas as pd
+
+    from padelvision.ball.dataset import DEFAULT_BOX_PX, ball_size_by_row, merge_ball_labels
+
+    v = np.linspace(200, 700, 100)
+    ball = pd.DataFrame({"v": v, "size": 5 + 0.03 * v, "state": "detected"})
+    size = ball_size_by_row(ball)
+    assert abs(size(400) - 17.0) < 0.1 and abs(size(10_000) - ball["size"].quantile(0.95)) < 1e-9
+    assert ball_size_by_row(ball.head(5))(300) == DEFAULT_BOX_PX
+
+    a = pd.DataFrame({"frame": [1, 1, 2], "u": [100, 300, 50], "v": [100, 300, 50], "size": 9.0})
+    b = pd.DataFrame({"frame": [1, 3], "u": [104, 10], "v": [103, 10], "size": 12.0})
+    m = merge_ball_labels([a, b])
+    assert len(m) == 4 and m[m.frame == 1]["size"].tolist() == [9.0, 9.0]  # (104, 103) = (100, 100)

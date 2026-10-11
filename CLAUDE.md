@@ -96,6 +96,8 @@ padelvision highlights <video> --run runs/match1 [--mode top|all] [--top 5]   # 
 #   refreshes stages 3-6 on CPU, then builds the highlights; no GPU or re-detection needed.
 #   ml/notebooks/08_full_match.ipynb: end to end for a long match from Google Drive (gdown -> /tmp, converted to
 #   1280 wide @ <= 30 fps, calibration check/stop, stages 0-7, summary, highlights + condensed, results.zip).
+#   ml/notebooks/09_retrain_ball.ipynb: fine-tune the ball detector on a new court from v1 (train blocks: v1-tracked
+#   ball + motion pseudo-labels, + Test_video + Universe), v1 vs v2 on held-out test blocks, 200-frame eval pack.
 padelvision ball-bootstrap <video> --run runs/match1          # classical candidates + pseudo-labels
 padelvision ball-review-pack <video> --run runs/match1 --out ball_review
 padelvision ball-track <video> --run runs/match1               # stage 4: ball in play (ml/notebooks/05)

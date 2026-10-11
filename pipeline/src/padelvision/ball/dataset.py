@@ -129,3 +129,30 @@ def count(root) -> dict:
         s: len(list((root / "images" / s).glob("*"))) if (root / "images" / s).exists() else 0
         for s in ("train", "val")
     }
+
+
+def ball_size_by_row(ball: pd.DataFrame, min_rows: int = 50):
+    """Ball box size (px) as a function of image row v, fitted (linear) on detected positions
+    with a size; a constant DEFAULT_BOX_PX if there are too few. Used to give box sizes to
+    labels that only have a position (motion pseudo-labels)."""
+    ok = ball[ball["size"].notna()] if "size" in ball else ball.iloc[:0]
+    if "state" in ok:
+        ok = ok[ok.state == "detected"]
+    if len(ok) < min_rows:
+        return lambda v: np.full(np.shape(v), DEFAULT_BOX_PX, float)
+    slope, icpt = np.polyfit(ok.v.to_numpy(float), ok["size"].to_numpy(float), 1)
+    lo, hi = np.percentile(ok["size"], [5, 95])
+    return lambda v: np.clip(slope * np.asarray(v, float) + icpt, lo, hi)
+
+
+def merge_ball_labels(sources: list[pd.DataFrame], dist_px: float = 10.0) -> pd.DataFrame:
+    """Union of label sources (frame, u, v, size), earlier sources first: a ball within
+    `dist_px` of one already kept in the same frame is the same ball and is dropped."""
+    kept: dict[int, list] = {}
+    for src in sources:
+        for r in src[["frame", "u", "v", "size"]].itertuples(index=False):
+            f = int(r.frame)
+            if all(np.hypot(r.u - k[1], r.v - k[2]) > dist_px for k in kept.get(f, [])):
+                kept.setdefault(f, []).append((f, float(r.u), float(r.v), float(r.size)))
+    rows = [row for f in sorted(kept) for row in kept[f]]
+    return pd.DataFrame(rows, columns=["frame", "u", "v", "size"])

@@ -184,14 +184,23 @@ def rally_card(
                         fontweight="bold", ha="left" if right else "right", va="center",
                         bbox={"facecolor": "#0f172a", "edgecolor": "none", "alpha": 0.75,
                               "pad": 1.5}, zorder=6)  # fmt: skip
-        if start is not None:
+        volley = s.get("no_landing") == "probably_volley"
+        if start is not None and volley:  # hollow dot: hit back before it bounced
+            ax.scatter([start[0]], [start[1]], s=110, facecolors="#0f172a", edgecolors=color,
+                       linewidths=2, zorder=4)  # fmt: skip
+            ax.text(start[0], start[1], str(n), color=color, fontsize=8, ha="center",
+                    va="center", zorder=5)  # fmt: skip
+        elif start is not None:
             ax.scatter([start[0]], [start[1]], s=110, color=color, edgecolors="white", zorder=4)
             ax.text(start[0], start[1], str(n), color="black", fontsize=8, ha="center",
                     va="center", zorder=5)  # fmt: skip
-    ax.set_title(f"Shots: {landed} of {len(mine)} landings seen", color="white", fontsize=11)
+    volleys = sum(s.get("no_landing") == "probably_volley" for s in mine)
+    unseen = len(mine) - landed - volleys
+    title = f"{len(mine)} shots: {landed} landed, {volleys} probably volleys, {unseen} not seen"
+    ax.set_title(title, color="white", fontsize=10)
     fig.text(0.98, 0.025, "Numbers: hitter's position at each shot, in order. Arrows: to where it "
-             "landed. km/h: estimate. Flight not measured.", color="#94a3b8", ha="right",
-             fontsize=9)  # fmt: skip
+             "landed. Hollow: probably a volley (hit back before bouncing). km/h: estimate. "
+             "Flight not measured.", color="#94a3b8", ha="right", fontsize=9)  # fmt: skip
     fig.canvas.draw()
     rgba = np.asarray(fig.canvas.buffer_rgba())
     plt.close(fig)

@@ -35,7 +35,8 @@ detector below target, hit/bounce recall unmeasured (needs human `label-events` 
   bound for the speed off the racket). A shot only gets a speed if its landing is a bounce tracked through (not a
   join between ball tracks), not at the image edge, the flight >= 0.5 s and the error range <= +-25%; each speed has
   `speed_range_kmh` (calibration per zone + 0.7 m feet-to-contact + timing), others a `speed_note`. Summaries need
-  3 shots. Never validated against a radar. Rally stats live there, not in stats.json (`restats` rewrites that).
+  3 shots. Never validated against a radar. Shots without a landing get `no_landing`: "probably_volley" (opponents
+  hit next, ball tracked >= 90% of the frames in between, no bounce) or "not_seen"; cards draw volleys hollow. Rally stats live there, not in stats.json (`restats` rewrites that).
   `render` draws hits, bounces and a rally banner. Test_video: 4 rallies, 18 rally hits (visual review: 17 real,
   1 unclear); 5 shots with a trustworthy speed, 33-56 km/h, each about +-20% (an 80 km/h one was a track join).
 - Videos: `render` (preview) and `highlights` (`highlights.py`: rallies ranked by hits + length + fastest

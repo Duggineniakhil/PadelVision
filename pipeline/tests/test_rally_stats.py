@@ -111,3 +111,19 @@ def test_only_trustworthy_shots_get_a_speed_with_a_range(cal):
         "bounce at a join between two ball tracks", "landing at the image edge",
         "flight under 0.5 s"]  # fmt: skip
     assert all(o[0] is None for o in out[1:])
+
+
+def test_shots_without_landing_say_why():
+    ev = pd.DataFrame(
+        [(0, "hit", 500, 600, np.nan, np.nan, None, 1, "near"),
+         (24, "hit", 600, 280, np.nan, np.nan, None, 3, "far"),  # hit back, ball seen: volley
+         (60, "hit", 500, 600, np.nan, np.nan, None, 2, "near"),  # ball mostly lost before it
+         (100, "hit", 600, 280, np.nan, np.nan, None, 4, "far")],  # last shot
+        columns=COLS,
+    )  # fmt: skip
+    ball = pd.DataFrame({"frame": [*range(0, 25), *range(25, 35), *range(60, 101)]})
+    ball = ball.assign(u=500.0, v=400.0, state="detected")
+    s = rally_stats(ev, [_rally(1, 0, 150, 4)], _feet([]), FPS, ball=ball)
+    assert [x["no_landing"] for x in s["shots"]] == [
+        "probably_volley", "not_seen", "probably_volley", "not_seen"]  # fmt: skip
+    assert s["placement"]["near"]["probably_volleys"] == 2

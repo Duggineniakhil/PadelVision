@@ -15,6 +15,10 @@ Only what the events support, and only inside rallies (ball handling and warm-up
   with that range (position error from the calibration per zone plus the feet-to-contact
   offset, timing error per event; bounce times refined to a fraction of a frame from the
   ball's fall and rise). Other shots get speed_note instead. Summaries need MIN_SAMPLES.
+- no landing: each shot without a landing bounce gets `no_landing`: "probably_volley" when the
+  opponents hit it next and the ball was tracked on >= VOLLEY_MIN_SEEN of the frames in between
+  without a bounce (in padel, volleys are common; a low bounce that isn't detected looks the
+  same, hence "probably"), otherwise "not_seen" (ball lost, or the last shot of the rally).
 Anything without enough data is null with a reason instead of a number.
 """
 
@@ -37,6 +41,7 @@ FEET_PX_ERR = 4.0  # foot point (box bottom) jitter
 BOUNCE_PX_ERR = 2.0  # ball centre at the bounce
 CONTACT_OFFSET_M = 0.7  # the racket meets the ball up to ~0.7 m from the feet (ground projection)
 HIT_T_ERR = {"within": 1.0, "junction": 3.0}  # frames; a junction turn is in a tracking gap
+VOLLEY_MIN_SEEN = 0.9  # share of frames to the next hit with the ball tracked
 POS_ERR_NO_CAL_M = 1.0  # position error when no calibration is given (tests, old runs)
 ZONES = ("net", "transition", "back")
 
@@ -88,6 +93,7 @@ def _shots(ev, rallies, players, fps, cal=None, ball=None) -> list:
     """Every hit inside a rally with its landing bounce (if any), the hitter's feet and, when
     trustworthy, a speed estimate with its range."""
     ball_det = None
+    ball_frames = set(ball.frame.astype(int)) if ball is not None and len(ball) else set()
     if ball is not None and len(ball):
         det = ball[ball.state == "detected"] if "state" in ball else ball
         ball_det = det.set_index("frame")[["u", "v"]].sort_index()
@@ -103,6 +109,9 @@ def _shots(ev, rallies, players, fps, cal=None, ball=None) -> list:
         if h.kind != "hit":
             continue
         landing = None
+        next_hit = next((e for e in rows[i + 1 :] if e.kind == "hit"), None)
+        if next_hit is not None and rally_of.get(int(next_hit.frame)) != rally_of.get(int(h.frame)):
+            next_hit = None
         for e in rows[i + 1 :]:
             if e.kind == "hit" or e.frame - h.frame > SHOT_MAX_S * fps:
                 break
@@ -116,7 +125,7 @@ def _shots(ev, rallies, players, fps, cal=None, ball=None) -> list:
         shot = {"frame": int(h.frame), "player": int(h.player), "team": h.team,
                 "hitter_xy": None if xy is None else [round(xy[0], 2), round(xy[1], 2)],
                 "bounce": None, "speed_kmh": None, "speed_range_kmh": None,
-                "speed_note": "landing not seen"}  # fmt: skip
+                "speed_note": "landing not seen", "no_landing": None}  # fmt: skip
         if landing is not None:
             shot["bounce"] = {"frame": int(landing.frame), "x_m": round(float(landing.x_m), 2),
                               "y_m": round(float(landing.y_m), 2),
@@ -126,8 +135,24 @@ def _shots(ev, rallies, players, fps, cal=None, ball=None) -> list:
             else:
                 kmh, rng, note = _shot_speed(h, landing, xy, fps, cal, ball_det)
                 shot.update(speed_kmh=kmh, speed_range_kmh=rng, speed_note=note)
+        else:
+            shot["no_landing"] = _why_no_landing(h, next_hit, ball_frames)
+            if shot["no_landing"] == "probably_volley":
+                shot["speed_note"] = "probably a volley: no landing"
         shots.append(shot)
     return shots
+
+
+def _why_no_landing(h, next_hit, ball_frames: set) -> str:
+    """ "probably_volley" if the opponents hit it next and the ball was tracked almost the whole
+    way without a bounce, else "not_seen"."""
+    if next_hit is None or next_hit.team == h.team or not ball_frames:
+        return "not_seen"
+    between = range(int(h.frame) + 1, int(next_hit.frame))
+    if not len(between):
+        return "not_seen"
+    seen = sum(f in ball_frames for f in between) / len(between)
+    return "probably_volley" if seen >= VOLLEY_MIN_SEEN else "not_seen"
 
 
 def _shot_speed(h, landing, xy, fps, cal, ball_det):
@@ -199,6 +224,8 @@ def _placement(shots: list) -> dict:
         out[team] = {
             "shots": len(mine),
             "landed": len(landed),
+            "probably_volleys": sum(s.get("no_landing") == "probably_volley" for s in mine),
+            "landing_not_seen": sum(s.get("no_landing") == "not_seen" for s in mine),
             "zones": {z: sum(b["zone"] == z for b in landed) for z in ZONES},
             "bounces": landed,
         }

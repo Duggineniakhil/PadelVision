@@ -24,9 +24,9 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from padelvision.court.draw import TEAM_COLORS, MiniCourt
+from padelvision.court.draw import MiniCourt
 from padelvision.overlay import StatsHud
-from padelvision.render import EVENT_SHOW_S, EVENT_STYLE, _draw_ball, _draw_events
+from padelvision.render import EVENT_SHOW_S, EVENT_STYLE, _draw_ball, _draw_events, draw_players
 from padelvision.visuals import rally_card
 
 PAD_S = 0.5  # extra video kept before and after each rally
@@ -100,10 +100,7 @@ def render_highlights(
                 canvas = mini.canvas()
                 rows = by_frame.get(f)
                 if rows is not None:
-                    for r in rows.itertuples():
-                        if r.valid:
-                            cv2.circle(canvas, mini.to_px((r.x_m, r.y_m)), 5, TEAM_COLORS[r.team],
-                                       -1, cv2.LINE_AA)  # fmt: skip
+                    draw_players(img, canvas, mini, rows)
                 _draw_ball(img, ball_at, f)
                 if len(shown):
                     _draw_events(img, canvas, mini, shown[shown.frame.between(f - show_frames, f)])

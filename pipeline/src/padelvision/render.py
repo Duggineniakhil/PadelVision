@@ -52,23 +52,7 @@ def render_preview(
             img = draw_court_overlay(img, cal, color=(0, 200, 200), thickness=1)
             canvas = mini.canvas()
             if rows is not None:
-                for r in rows.itertuples():
-                    color = TEAM_COLORS[r.team]
-                    p1, p2 = (round(r.x1), round(r.y1)), (round(r.x2), round(r.y2))
-                    cv2.rectangle(img, p1, p2, color, 2)
-                    label = f"P{r.player}" + ("" if r.valid else " (feet cut)")
-                    cv2.putText(
-                        img,
-                        label,
-                        (p1[0], p1[1] - 5),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        color,
-                        2,
-                        cv2.LINE_AA,
-                    )
-                    if r.valid:
-                        cv2.circle(canvas, mini.to_px((r.x_m, r.y_m)), 5, color, -1, cv2.LINE_AA)
+                draw_players(img, canvas, mini, rows)
             _draw_ball(img, ball_at, frame)
             if len(shown):
                 recent = shown[shown.frame.between(frame - show_frames, frame)]
@@ -144,3 +128,18 @@ def _draw_rally(img, rallies: list[dict], events: pd.DataFrame, frame: int) -> N
     text = f"RALLY {rally['id']}  hits {hits}"
     cv2.rectangle(img, (8, 8), (30 + 13 * len(text), 42), (0, 0, 0), -1)
     cv2.putText(img, text, (16, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+
+
+def draw_players(img, canvas, mini: MiniCourt, rows: pd.DataFrame) -> None:
+    """Player boxes with labels on the video, and their court positions on the mini court."""
+    for r in rows.itertuples():
+        color = TEAM_COLORS[r.team]
+        p1, p2 = (round(r.x1), round(r.y1)), (round(r.x2), round(r.y2))
+        cv2.rectangle(img, p1, p2, color, 2)
+        label = f"P{r.player}" + ("" if r.valid else " (feet cut)")
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        cv2.rectangle(img, (p1[0], p1[1] - th - 8), (p1[0] + tw + 8, p1[1]), color, -1)
+        cv2.putText(img, label, (p1[0] + 4, p1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                    (255, 255, 255), 1, cv2.LINE_AA)  # fmt: skip
+        if r.valid:
+            cv2.circle(canvas, mini.to_px((r.x_m, r.y_m)), 5, color, -1, cv2.LINE_AA)

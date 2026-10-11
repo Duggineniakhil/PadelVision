@@ -69,6 +69,10 @@ error: near the net 1 px is ~0.11 m and in the far half ~0.3 m, so a 4 px click 
 half 0.67 m. Its far baseline, far side edges and far centre line were snapped from a median background of the
 video; 6 old right-side points that sat on a floor stripe were dropped; the lens was kept fixed (refitting it
 from short far lines overfits). With it, far players near the far baseline are no longer dropped as off-court.
+GX010012 (19 min match, another club, GoPro 4K converted to 1280x720 by notebook 08): built 2026-10-11 from the
+notebook's background image with snapped lines only (near/far service lines, centre line, both side walls, far
+baseline), lens fitted freely (k1 -1.105, close to Test_video's -1.053: same GoPro mode). Fit 1.6 px; the net,
+not a constraint, projects onto the net base within ~2-5 px. Near half 0.02 m, net 0.11 m, far half 0.31 m.
 
 ## Commands (run from repo root; Windows venv paths shown)
 ```bash

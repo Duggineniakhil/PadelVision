@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* One restrained accent (court blue); everything else is neutral. */
+  --color-accent: #1d4ed8;
+  --color-accent-hover: #1e40af;
+  --color-accent-soft: #eff4ff;
+  --color-court: #2c4f7c;
+  --color-court-line: #f8fafc;
+  --color-near: #16a34a;
+  --color-far: #ea580c;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: #f7f7f8;
+}
+
+body {
+  color: #18181b;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Numbers in tables and stat tiles line up. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #dbe5ff;
+}

@@ -1,0 +1,2076 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "PadelVision API",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/api/runs": {
+   "get": {
+    "summary": "List Runs",
+    "operationId": "list_runs_api_runs_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/RunListItem"
+         },
+         "type": "array",
+         "title": "Response List Runs Api Runs Get"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "summary": "Import Run",
+    "description": "Import notebook output zips (run_cache.zip, results.zip, ...) as a new run.",
+    "operationId": "import_run_api_runs_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_import_run_api_runs_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunListItem"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}": {
+   "get": {
+    "summary": "Get Run",
+    "operationId": "get_run_api_runs__run_id__get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "summary": "Rename Run",
+    "operationId": "rename_run_api_runs__run_id__patch",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RenameRun"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunListItem"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "summary": "Delete Run",
+    "operationId": "delete_run_api_runs__run_id__delete",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/reprocess": {
+   "post": {
+    "summary": "Reprocess",
+    "operationId": "reprocess_api_runs__run_id__reprocess_post",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunListItem"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/video": {
+   "put": {
+    "summary": "Attach Video Path",
+    "description": "Attach the match video by its path on this computer (no copy).",
+    "operationId": "attach_video_path_api_runs__run_id__video_put",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AttachVideo"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "summary": "Upload Video",
+    "description": "Attach the match video by uploading it (copied into the run folder).",
+    "operationId": "upload_video_api_runs__run_id__video_post",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_upload_video_api_runs__run_id__video_post"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunDetail"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "summary": "Get Video",
+    "operationId": "get_video_api_runs__run_id__video_get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/files/{name}": {
+   "get": {
+    "summary": "Get File",
+    "operationId": "get_file_api_runs__run_id__files__name__get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     },
+     {
+      "name": "name",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Name"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/rallies": {
+   "get": {
+    "summary": "Get Rallies",
+    "operationId": "get_rallies_api_runs__run_id__rallies_get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RalliesResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/events": {
+   "get": {
+    "summary": "Get Events",
+    "operationId": "get_events_api_runs__run_id__events_get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Event"
+         },
+         "title": "Response Get Events Api Runs  Run Id  Events Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/tracks": {
+   "get": {
+    "summary": "Get Tracks",
+    "operationId": "get_tracks_api_runs__run_id__tracks_get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     },
+     {
+      "name": "sample_fps",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "number",
+       "maximum": 30,
+       "exclusiveMinimum": 0,
+       "default": 5.0,
+       "title": "Sample Fps"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TracksResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/overlay": {
+   "get": {
+    "summary": "Get Overlay",
+    "operationId": "get_overlay_api_runs__run_id__overlay_get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     },
+     {
+      "name": "start",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "title": "Start"
+      }
+     },
+     {
+      "name": "end",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "title": "End"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OverlayResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/highlights": {
+   "get": {
+    "summary": "Get Highlights",
+    "operationId": "get_highlights_api_runs__run_id__highlights_get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HighlightsResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AttachVideo": {
+    "properties": {
+     "path": {
+      "type": "string",
+      "title": "Path"
+     }
+    },
+    "type": "object",
+    "required": [
+     "path"
+    ],
+    "title": "AttachVideo"
+   },
+   "Body_import_run_api_runs_post": {
+    "properties": {
+     "files": {
+      "items": {
+       "type": "string",
+       "contentMediaType": "application/octet-stream"
+      },
+      "type": "array",
+      "title": "Files"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "files"
+    ],
+    "title": "Body_import_run_api_runs_post"
+   },
+   "Body_upload_video_api_runs__run_id__video_post": {
+    "properties": {
+     "file": {
+      "type": "string",
+      "contentMediaType": "application/octet-stream",
+      "title": "File"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file"
+    ],
+    "title": "Body_upload_video_api_runs__run_id__video_post"
+   },
+   "Bounce": {
+    "properties": {
+     "frame": {
+      "type": "integer",
+      "title": "Frame"
+     },
+     "t": {
+      "type": "number",
+      "title": "T"
+     },
+     "x_m": {
+      "type": "number",
+      "title": "X M"
+     },
+     "y_m": {
+      "type": "number",
+      "title": "Y M"
+     },
+     "zone": {
+      "type": "string",
+      "title": "Zone"
+     }
+    },
+    "type": "object",
+    "required": [
+     "frame",
+     "t",
+     "x_m",
+     "y_m",
+     "zone"
+    ],
+    "title": "Bounce"
+   },
+   "Clip": {
+    "properties": {
+     "rally_id": {
+      "type": "integer",
+      "title": "Rally Id"
+     },
+     "start_s": {
+      "type": "number",
+      "title": "Start S"
+     },
+     "end_s": {
+      "type": "number",
+      "title": "End S"
+     },
+     "duration_s": {
+      "type": "number",
+      "title": "Duration S"
+     },
+     "hits": {
+      "type": "integer",
+      "title": "Hits"
+     },
+     "max_shot_kmh": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Shot Kmh"
+     },
+     "score": {
+      "type": "number",
+      "title": "Score"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rally_id",
+     "start_s",
+     "end_s",
+     "duration_s",
+     "hits",
+     "score"
+    ],
+    "title": "Clip"
+   },
+   "CourtInfo": {
+    "properties": {
+     "image_width": {
+      "type": "integer",
+      "title": "Image Width"
+     },
+     "image_height": {
+      "type": "integer",
+      "title": "Image Height"
+     },
+     "rms_px": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rms Px"
+     },
+     "zones": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/ZoneAccuracy"
+      },
+      "type": "object",
+      "title": "Zones"
+     },
+     "lines_image": {
+      "items": {
+       "items": {
+        "prefixItems": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "number"
+         }
+        ],
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Lines Image"
+     }
+    },
+    "type": "object",
+    "required": [
+     "image_width",
+     "image_height",
+     "zones",
+     "lines_image"
+    ],
+    "title": "CourtInfo"
+   },
+   "Event": {
+    "properties": {
+     "frame": {
+      "type": "integer",
+      "title": "Frame"
+     },
+     "t": {
+      "type": "number",
+      "title": "T"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "hit",
+       "bounce",
+       "handling",
+       "turn"
+      ],
+      "title": "Kind"
+     },
+     "u": {
+      "type": "number",
+      "title": "U"
+     },
+     "v": {
+      "type": "number",
+      "title": "V"
+     },
+     "player": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Player"
+     },
+     "team": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "near",
+         "far"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team"
+     },
+     "x_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "X M"
+     },
+     "y_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Y M"
+     },
+     "in_court": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "In Court"
+     }
+    },
+    "type": "object",
+    "required": [
+     "frame",
+     "t",
+     "kind",
+     "u",
+     "v"
+    ],
+    "title": "Event"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "HighlightsResponse": {
+    "properties": {
+     "highlights": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/HighlightsVideo"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "condensed": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/HighlightsVideo"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "title": "HighlightsResponse"
+   },
+   "HighlightsVideo": {
+    "properties": {
+     "file": {
+      "type": "string",
+      "title": "File"
+     },
+     "total_s": {
+      "type": "number",
+      "title": "Total S"
+     },
+     "clips": {
+      "items": {
+       "$ref": "#/components/schemas/Clip"
+      },
+      "type": "array",
+      "title": "Clips"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file",
+     "total_s",
+     "clips"
+    ],
+    "title": "HighlightsVideo"
+   },
+   "OverlayResponse": {
+    "properties": {
+     "start_frame": {
+      "type": "integer",
+      "title": "Start Frame"
+     },
+     "end_frame": {
+      "type": "integer",
+      "title": "End Frame"
+     },
+     "box_frame": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Box Frame"
+     },
+     "box_player": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Box Player"
+     },
+     "box_x1": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Box X1"
+     },
+     "box_y1": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Box Y1"
+     },
+     "box_x2": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Box X2"
+     },
+     "box_y2": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Box Y2"
+     },
+     "ball_frame": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Ball Frame"
+     },
+     "ball_u": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Ball U"
+     },
+     "ball_v": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Ball V"
+     },
+     "ball_detected": {
+      "items": {
+       "type": "boolean"
+      },
+      "type": "array",
+      "title": "Ball Detected"
+     }
+    },
+    "type": "object",
+    "required": [
+     "start_frame",
+     "end_frame",
+     "box_frame",
+     "box_player",
+     "box_x1",
+     "box_y1",
+     "box_x2",
+     "box_y2",
+     "ball_frame",
+     "ball_u",
+     "ball_v",
+     "ball_detected"
+    ],
+    "title": "OverlayResponse",
+    "description": "Columnar per-frame data for drawing on the video between two frames."
+   },
+   "PlayerStats": {
+    "properties": {
+     "player": {
+      "type": "integer",
+      "title": "Player"
+     },
+     "team": {
+      "type": "string",
+      "enum": [
+       "near",
+       "far"
+      ],
+      "title": "Team"
+     },
+     "tracked_fraction": {
+      "type": "number",
+      "title": "Tracked Fraction"
+     },
+     "insufficient_data": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Insufficient Data"
+     },
+     "tracked_s": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tracked S"
+     },
+     "distance_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Distance M"
+     },
+     "avg_speed_kmh": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Avg Speed Kmh"
+     },
+     "peak_speed_kmh": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Peak Speed Kmh"
+     },
+     "sprints": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sprints"
+     },
+     "zones": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "number"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Zones"
+     },
+     "rally_hits": {
+      "type": "integer",
+      "title": "Rally Hits",
+      "default": 0
+     },
+     "shot_speed_median_kmh": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Shot Speed Median Kmh"
+     },
+     "shot_speed_max_kmh": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Shot Speed Max Kmh"
+     },
+     "shot_speed_samples": {
+      "type": "integer",
+      "title": "Shot Speed Samples",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "required": [
+     "player",
+     "team",
+     "tracked_fraction"
+    ],
+    "title": "PlayerStats"
+   },
+   "PlayerTrack": {
+    "properties": {
+     "t": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "T"
+     },
+     "x": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "X"
+     },
+     "y": {
+      "items": {
+       "type": "number"
+      },
+      "type": "array",
+      "title": "Y"
+     }
+    },
+    "type": "object",
+    "required": [
+     "t",
+     "x",
+     "y"
+    ],
+    "title": "PlayerTrack"
+   },
+   "QualityNote": {
+    "properties": {
+     "level": {
+      "type": "string",
+      "enum": [
+       "info",
+       "warning"
+      ],
+      "title": "Level"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "detail": {
+      "type": "string",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "required": [
+     "level",
+     "title",
+     "detail"
+    ],
+    "title": "QualityNote"
+   },
+   "RalliesResponse": {
+    "properties": {
+     "rallies": {
+      "items": {
+       "$ref": "#/components/schemas/Rally"
+      },
+      "type": "array",
+      "title": "Rallies"
+     },
+     "shots": {
+      "items": {
+       "$ref": "#/components/schemas/Shot"
+      },
+      "type": "array",
+      "title": "Shots"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rallies",
+     "shots"
+    ],
+    "title": "RalliesResponse"
+   },
+   "Rally": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "start_frame": {
+      "type": "integer",
+      "title": "Start Frame"
+     },
+     "end_frame": {
+      "type": "integer",
+      "title": "End Frame"
+     },
+     "start_s": {
+      "type": "number",
+      "title": "Start S"
+     },
+     "end_s": {
+      "type": "number",
+      "title": "End S"
+     },
+     "duration_s": {
+      "type": "number",
+      "title": "Duration S"
+     },
+     "hits": {
+      "type": "integer",
+      "title": "Hits"
+     },
+     "bounces": {
+      "type": "integer",
+      "title": "Bounces"
+     },
+     "hits_by_player": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Hits By Player"
+     },
+     "max_shot_kmh": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Shot Kmh"
+     },
+     "measured_shots": {
+      "type": "integer",
+      "title": "Measured Shots"
+     },
+     "landed": {
+      "type": "integer",
+      "title": "Landed"
+     },
+     "probable_volleys": {
+      "type": "integer",
+      "title": "Probable Volleys"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "start_frame",
+     "end_frame",
+     "start_s",
+     "end_s",
+     "duration_s",
+     "hits",
+     "bounces",
+     "hits_by_player",
+     "measured_shots",
+     "landed",
+     "probable_volleys"
+    ],
+    "title": "Rally"
+   },
+   "RallySummary": {
+    "properties": {
+     "count": {
+      "type": "integer",
+      "title": "Count"
+     },
+     "total_s": {
+      "type": "number",
+      "title": "Total S"
+     },
+     "median_s": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Median S"
+     },
+     "max_s": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max S"
+     },
+     "hits_total": {
+      "type": "integer",
+      "title": "Hits Total"
+     },
+     "hits_per_rally": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hits Per Rally"
+     },
+     "other_activity": {
+      "type": "integer",
+      "title": "Other Activity"
+     }
+    },
+    "type": "object",
+    "required": [
+     "count",
+     "total_s",
+     "hits_total",
+     "other_activity"
+    ],
+    "title": "RallySummary"
+   },
+   "RenameRun": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name"
+    ],
+    "title": "RenameRun"
+   },
+   "RunDetail": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "created": {
+      "type": "string",
+      "title": "Created"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "processing",
+       "ready",
+       "error"
+      ],
+      "title": "Status"
+     },
+     "status_message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status Message"
+     },
+     "video": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/VideoInfo"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "has_video": {
+      "type": "boolean",
+      "title": "Has Video"
+     },
+     "video_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Video Name"
+     },
+     "media": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Media"
+     },
+     "court": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CourtInfo"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "ball_coverage": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ball Coverage"
+     },
+     "players": {
+      "items": {
+       "$ref": "#/components/schemas/PlayerStats"
+      },
+      "type": "array",
+      "title": "Players"
+     },
+     "teams": {
+      "items": {
+       "$ref": "#/components/schemas/TeamStats"
+      },
+      "type": "array",
+      "title": "Teams"
+     },
+     "rally_summary": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/RallySummary"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "speed_summary": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/SpeedSummary"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "quality": {
+      "items": {
+       "$ref": "#/components/schemas/QualityNote"
+      },
+      "type": "array",
+      "title": "Quality"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "created",
+     "status",
+     "has_video",
+     "media",
+     "players",
+     "teams",
+     "quality"
+    ],
+    "title": "RunDetail"
+   },
+   "RunListItem": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "created": {
+      "type": "string",
+      "title": "Created"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "processing",
+       "ready",
+       "error"
+      ],
+      "title": "Status"
+     },
+     "status_message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status Message"
+     },
+     "duration_s": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Duration S"
+     },
+     "rallies": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rallies"
+     },
+     "hits": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hits"
+     },
+     "has_video": {
+      "type": "boolean",
+      "title": "Has Video"
+     },
+     "has_highlights": {
+      "type": "boolean",
+      "title": "Has Highlights"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "created",
+     "status",
+     "has_video",
+     "has_highlights"
+    ],
+    "title": "RunListItem"
+   },
+   "Shot": {
+    "properties": {
+     "frame": {
+      "type": "integer",
+      "title": "Frame"
+     },
+     "t": {
+      "type": "number",
+      "title": "T"
+     },
+     "rally_id": {
+      "type": "integer",
+      "title": "Rally Id"
+     },
+     "index": {
+      "type": "integer",
+      "title": "Index"
+     },
+     "player": {
+      "type": "integer",
+      "title": "Player"
+     },
+     "team": {
+      "type": "string",
+      "enum": [
+       "near",
+       "far"
+      ],
+      "title": "Team"
+     },
+     "hitter_xy": {
+      "anyOf": [
+       {
+        "prefixItems": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "number"
+         }
+        ],
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Hitter Xy"
+     },
+     "bounce": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Bounce"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "speed_kmh": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Speed Kmh"
+     },
+     "speed_range_kmh": {
+      "anyOf": [
+       {
+        "prefixItems": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "number"
+         }
+        ],
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Speed Range Kmh"
+     },
+     "speed_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Speed Note"
+     },
+     "no_landing": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "probably_volley",
+         "not_seen"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "No Landing"
+     }
+    },
+    "type": "object",
+    "required": [
+     "frame",
+     "t",
+     "rally_id",
+     "index",
+     "player",
+     "team"
+    ],
+    "title": "Shot"
+   },
+   "SpeedSummary": {
+    "properties": {
+     "samples": {
+      "type": "integer",
+      "title": "Samples"
+     },
+     "median_kmh": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Median Kmh"
+     },
+     "max_kmh": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Max Kmh"
+     },
+     "insufficient_data": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Insufficient Data"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "samples"
+    ],
+    "title": "SpeedSummary"
+   },
+   "TeamStats": {
+    "properties": {
+     "team": {
+      "type": "string",
+      "enum": [
+       "near",
+       "far"
+      ],
+      "title": "Team"
+     },
+     "insufficient_data": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Insufficient Data"
+     },
+     "both_tracked_fraction": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Both Tracked Fraction"
+     },
+     "formation": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "number"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Formation"
+     },
+     "partner_spacing_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Partner Spacing M"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team"
+    ],
+    "title": "TeamStats"
+   },
+   "TracksResponse": {
+    "properties": {
+     "sample_fps": {
+      "type": "number",
+      "title": "Sample Fps"
+     },
+     "players": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/PlayerTrack"
+      },
+      "type": "object",
+      "title": "Players"
+     }
+    },
+    "type": "object",
+    "required": [
+     "sample_fps",
+     "players"
+    ],
+    "title": "TracksResponse"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "VideoInfo": {
+    "properties": {
+     "width": {
+      "type": "integer",
+      "title": "Width"
+     },
+     "height": {
+      "type": "integer",
+      "title": "Height"
+     },
+     "fps": {
+      "type": "number",
+      "title": "Fps"
+     },
+     "frame_count": {
+      "type": "integer",
+      "title": "Frame Count"
+     },
+     "duration_s": {
+      "type": "number",
+      "title": "Duration S"
+     }
+    },
+    "type": "object",
+    "required": [
+     "width",
+     "height",
+     "fps",
+     "frame_count",
+     "duration_s"
+    ],
+    "title": "VideoInfo"
+   },
+   "ZoneAccuracy": {
+    "properties": {
+     "m_per_px": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "M Per Px"
+     },
+     "expected_error_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Expected Error M"
+     }
+    },
+    "type": "object",
+    "title": "ZoneAccuracy"
+   }
+  }
+ }
+}

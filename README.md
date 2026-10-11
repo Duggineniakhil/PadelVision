@@ -7,9 +7,8 @@ automatically cut highlight videos. It is built around a hard but common case: a
 low, wide-angle camera (a GoPro or phone) standing behind one baseline, with lens distortion, a compressed far
 court and a ball that is often only a few pixels wide.
 
-> Personal / portfolio project, rebuilt from scratch (V2). The design principle throughout is **measure, don't
-> invent**: when something can't be measured reliably, the output says so instead of showing a plausible-looking
-> number.
+> The design principle throughout is **measure, don't invent**: when something can't be measured reliably, the
+> output says so instead of showing a plausible-looking number.
 
 <p align="center">
   <img src="docs/images/rally_card.png" alt="Rally summary card: per-player heatmaps and shot map" width="820">
@@ -31,8 +30,26 @@ court and a ball that is often only a few pixels wide.
 | **Rallies** | Points detected from the exchange of hits; rally length, hits per rally and per player |
 | **Shots** | Shot map (hitter → landing point), placement by zone, and a shot-speed estimate with an error range |
 | **Video** | Annotated preview, a **highlights** video of the best rallies, and a **condensed match** with the dead time removed, each with a live stats overlay and a summary card after every rally |
+| **Web app** | A local dashboard to browse matches: overview, players, rallies, shots, highlights, and the match video with players, ball and events drawn over it |
 
 Everything is computed from one camera: no wearables, no multi-camera rig, no manual tagging.
+
+## Web app
+
+A local web app to explore analysed matches. Import the result files from the analysis notebook and everything is
+one click (or one <kbd>Ctrl</kbd>+<kbd>K</kbd> search) away:
+
+| Section | What you find |
+|---|---|
+| **Overview** | Key numbers, data-quality notes, a timeline of all rallies, players and measurement accuracy |
+| **Video** | The match video with players, ball, court lines, hits and bounces drawn on top, a clickable rally timeline and keyboard shortcuts (<kbd>Space</kbd>, <kbd>←</kbd>/<kbd>→</kbd>, <kbd>J</kbd>/<kbd>K</kbd> for previous/next rally) |
+| **Players** | Court heatmap, distance, speeds, sprints and zones for each player; team formation and partner spacing |
+| **Rallies** | Every rally, sortable and filterable, with its shot map and a shot-by-shot breakdown |
+| **Shots** | Where each team's shots landed, and every measured shot speed with its uncertainty |
+| **Highlights** | The highlights video and condensed match, with a clip list |
+
+The app reads results only; detection runs in the notebooks. Its API re-runs the light stages (identities, ball
+tracking, events, statistics) with the current code when a match is imported.
 
 ## How it works
 
@@ -107,6 +124,17 @@ padelvision ball-retrack runs/match1    # ball tracking from cached detections
 padelvision events       runs/match1    # hits, bounces, rallies, shot stats, placement map
 ```
 
+### Web app
+
+```bash
+.venv/Scripts/python -m pip install -e api        # FastAPI backend
+.venv/Scripts/padelvision-api                     # http://127.0.0.1:8000, matches stored in ./runs
+cd web && npm install && npm run dev              # http://localhost:3000
+```
+
+Then choose **Import match** and add `run_cache.zip` and `results.zip` from notebook 08. To watch the match with
+overlays, add its video on the match page (the converted video the notebook saves, or the original file).
+
 ### Full matches (Kaggle or Colab, GPU)
 
 Model inference runs in notebooks on a free Kaggle (preferred) or Colab GPU. Each notebook clones the repo,
@@ -141,6 +169,8 @@ padelvision event-review-pack | label-events | events-eval  hit/bounce labelling
 ## Project structure
 
 ```
+web/                   Next.js + TypeScript + Tailwind web app
+api/                   FastAPI backend: imports runs, serves results and video (no CV code)
 pipeline/              padelvision Python package (CV and analytics core) + tests
   src/padelvision/
     court/             geometry, lens model, calibration, calibration tool, drawing
@@ -174,10 +204,14 @@ through one interface, so another detector can be swapped in.
 ## Development
 
 ```bash
-.venv/Scripts/python -m pytest pipeline         # unit tests (no weights or GPU)
-.venv/Scripts/ruff check pipeline scripts       # lint
-.venv/Scripts/ruff format pipeline scripts      # format
+.venv/Scripts/python -m pytest pipeline api     # unit tests (no weights or GPU)
+.venv/Scripts/ruff check pipeline api scripts   # lint
+.venv/Scripts/ruff format pipeline api scripts  # format
+cd web && npm run lint && npx tsc --noEmit      # web app
 ```
+
+The web app's API types are generated from the backend's OpenAPI schema:
+`python scripts/export_openapi.py && (cd web && npm run gen:api)`.
 
 Conventions: Python ≥ 3.10 with type hints; each stage reads and writes files in the run folder; tuning constants
 sit at the top of each module.
@@ -186,13 +220,14 @@ sit at the top of each module.
 
 - Retrain the ball detector across courts, then measure hit and bounce recall with exhaustive labels
 - Shot types (pose plus ball trajectory)
-- A local web app: FastAPI backend plus a Next.js dashboard with overlays drawn on the original video
+- Rendering highlights from the web app, and comparing matches over time
 
 The full plan is in [`docs/V2_PLAN.md`](docs/V2_PLAN.md).
 
 ## Licensing and credits
 
-- **Ultralytics YOLO11** (AGPL-3.0) is used for detection, which suits a non-commercial, open project.
+- **Ultralytics YOLO11** (AGPL-3.0) is used for detection; closed-source or commercial use needs an Ultralytics
+  licence or a swap to another detector (all model access goes through one interface).
 - **Ball training data:** the developer's own footage plus Roboflow Universe datasets (CC BY 4.0); see the
   [model card](docs/models/padel_ball_yolo11s.md) for sources.
 - **Videos:** never part of the repository.

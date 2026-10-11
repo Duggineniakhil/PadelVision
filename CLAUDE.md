@@ -10,7 +10,7 @@ it over wholesale. The full plan, phases and model strategy are in `docs/V2_PLAN
 it before starting larger work.
 
 ## Status
-Phases 0-3 are built; phase 4 (web app) is deferred. Everything is tuned and measured on one video, the
+Phases 0-4 are built (phase 4: local web app). Everything is tuned and measured on one video, the
 developer's Test_video (206 s, mostly warm-up and ball handling, 4 short rallies). Current numbers and gaps are
 in `ml/eval/README.md`; open items: ball
 detector below target, hit/bounce recall unmeasured (needs human `label-events` labels).
@@ -52,8 +52,18 @@ retraining the ball detector with this court; tracker rules can't recover undete
   No model involved. Rally stats also give per-player max/median shot speed estimates and per-rally summaries.
 - Eval tooling: `event-review-pack` (Kaggle) -> `label-events` (local GUI) -> `events-eval`.
 
-`web/` and `api/` don't exist yet. Don't invent commands for tooling that hasn't been set up; add them here
-once they exist.
+- Web app (phase 4): `api/` (FastAPI, package `padelvision_api`, runs stored in ./runs or $PADELVISION_RUNS) imports
+  notebook zips (run_cache.zip, results.zip), re-runs restats / ball-retrack / events in a background thread, and
+  serves JSON views (`views.py`), media and the match video (HTTP Range). A video is attached by local path or
+  upload and checked by frame count + aspect ratio (any resolution of the same footage). `web/` (Next.js 16 App
+  Router, TS strict, Tailwind 4, SWR): Matches, then per match Overview / Video / Players / Rallies / Shots /
+  Highlights, Ctrl+K command palette. Video overlays are drawn on a canvas from /overlay windows, synced with
+  requestVideoFrameCallback. Next 16 has Cache Components on: pages are a server `page.tsx` (`instant = false`)
+  rendering a client `view.tsx`; URL hooks sit under `<Suspense>`. Read `web/node_modules/next/dist/docs/` before
+  using Next APIs (see web/AGENTS.md). API types: `python scripts/export_openapi.py && (cd web && npm run gen:api)`.
+  Design: neutral zinc UI, one accent (court blue), team colours near green / far orange, no gradients.
+
+Don't invent commands for tooling that hasn't been set up; add them here once they exist.
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),
 `models/` (manifest registry, `person_tracker.py`, the only ultralytics import), `players/`
@@ -111,6 +121,11 @@ padelvision event-review-pack <video> --run runs/match1 --out event_review   # f
 # Local: label every hit/bounce in the pack's windows (A/D step, H hit, B bounce, V window done), then score
 .venv/Scripts/padelvision label-events data/event_review
 .venv/Scripts/padelvision events-eval data/runs/match1 --labels ml/eval/labels/Test_video_events.csv
+# Web app (local): API on :8000, web on :3000
+.venv/Scripts/python -m pip install -e api
+.venv/Scripts/padelvision-api
+cd web && npm install && npm run dev        # lint: npm run lint; types: npx tsc --noEmit
+.venv/Scripts/python -m pytest api          # API tests
 ```
 To tune identity or stats logic, ask for the run folder (`detections.parquet`, `video.json`,
 `stats.json`) from Kaggle and iterate locally with `restats`. Don't send the developer back to

@@ -230,3 +230,20 @@ def test_calibration_image_snap_fit_and_run_court(client):
     r = client.post(f"/api/runs/{run_id}/court/background")
     assert r.status_code == 422 and "video" in r.json()["detail"]
     assert client.post(f"/api/runs/{run_id}/court/restore").status_code == 422
+
+
+def test_camera_moved_warning(client):
+    camera = {
+        "camera_moved": True,
+        "moved": [{"between_s": [300.0, 360.0], "moved_px": 14.0}],
+        "extra_error_m": {"near_half": 0.2, "net": 1.0, "far_half": 2.8},
+        "checkpoints": [],
+    }
+    files = {"video.json": json.dumps(VIDEO), "stats.json": json.dumps(STATS),
+             "camera.json": json.dumps(camera)}  # fmt: skip
+    run_id = _import(client, files=files).json()["id"]
+    d = _wait_ready(client, run_id)
+    note = next(q for q in d["quality"] if q["title"] == "The camera moved during the video")
+    assert (
+        note["level"] == "warning" and "5:00-6:00" in note["detail"] and "2.8 m" in note["detail"]
+    )

@@ -116,6 +116,12 @@ def _cmd_ball_track(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_camera_check(args: argparse.Namespace) -> int:
+    from padelvision.run import camera_check
+
+    return 1 if camera_check(args.video, args.run)["camera_moved"] else 0
+
+
 def _cmd_appearance(args: argparse.Namespace) -> int:
     from padelvision.run import appearance
 
@@ -255,6 +261,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("run", help="run folder with video.json, detections.parquet, stats.json")
     p.add_argument("--court", default=None, help="use a different court.json")
     p.set_defaults(func=_cmd_restats)
+
+    p = sub.add_parser("camera-check", help="did the camera move during the video (reads frames)")
+    p.add_argument("video")
+    p.add_argument("--run", required=True, help="run folder with court.json")
+    p.set_defaults(func=_cmd_camera_check)
 
     p = sub.add_parser("appearance", help="shirt/shorts colours of the players (reads the video)")
     p.add_argument("video")

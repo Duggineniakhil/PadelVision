@@ -77,6 +77,7 @@ def detail(run: Path) -> S.RunDetail:
             other_activity=len(rallies.get("other_activity", [])),
         )  # fmt: skip
     persons = stats.get("persons") or {}
+    camera = _json(run / "camera.json")
     changeovers = [S.Changeover(t=c["t"], evidence=c["evidence"])
                    for c in persons.get("changeovers", [])]  # fmt: skip
     unresolved = len(persons.get("unresolved_gatherings", []))
@@ -107,8 +108,9 @@ def detail(run: Path) -> S.RunDetail:
         teams=_teams(stats), rally_summary=rally_summary, speed_summary=speed,
         points_summary=points,
         changeovers=changeovers, unresolved_gatherings=unresolved,
-        quality=_quality(court, coverage, players, rally_summary, speed, changeovers, unresolved,
-                         colours),
+        quality=_camera_notes(camera) + _quality(
+            court, coverage, players, rally_summary, speed, changeovers, unresolved, colours
+        ),
     )  # fmt: skip
 
 
@@ -149,6 +151,28 @@ def _teams(stats: dict) -> list[S.TeamStats]:
             formation=t.get("formation"), partner_spacing_m=t.get("partner_spacing_m"),
         ))  # fmt: skip
     return out
+
+
+def _camera_notes(camera: dict | None) -> list[S.QualityNote]:
+    """A warning when the camera moved during the video (camera.json from `camera-check`)."""
+    if not camera or not camera.get("camera_moved"):
+        return []
+    when = ", ".join(
+        f"{_clock(a)}-{_clock(b)} (~{m['moved_px']:.0f} px)"
+        for m in camera["moved"]
+        for a, b in [m["between_s"]]
+    )
+    err = camera.get("extra_error_m") or {}
+    near, far = err.get("near_half"), err.get("far_half")
+    size = ""
+    if near is not None and far is not None:
+        size = (
+            f" Positions after it are off by up to ~{near} m near the camera and ~{far} m far away."
+        )
+    return [S.QualityNote(
+        level="warning", title="The camera moved during the video",
+        detail=f"It moved between {when}.{size} Split the video there and calibrate each part.",
+    )]  # fmt: skip
 
 
 def _clock(t: float) -> str:

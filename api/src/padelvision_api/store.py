@@ -26,13 +26,14 @@ RUN_FILES = {  # everything a run may contain (anything else in an imported zip 
     "players.parquet", "tracks.parquet", "ball_detections.parquet", "ball_detections.json",
     "ball.parquet", "ball_stats.json", "events.parquet", "rallies.json", "heatmaps.png",
     "placement.png", "court_overlay.png", "highlights.mp4", "highlights.json", "condensed.mp4",
-    "condensed.json", "appearance.parquet",
+    "condensed.json", "appearance.parquet", "camera.json",
 }  # fmt: skip
 MEDIA_FILES = {"highlights.mp4", "condensed.mp4", "heatmaps.png", "placement.png",
                "court_overlay.png"}  # fmt: skip
 # Files that can be replaced in an existing run: rendered outputs, and the players' clothing
 # colours (the analysis is then re-run so players are followed across changeovers with them).
-UPDATABLE_FILES = MEDIA_FILES | {"highlights.json", "condensed.json", "appearance.parquet"}
+UPDATABLE_FILES = MEDIA_FILES | {"highlights.json", "condensed.json", "appearance.parquet",
+                                  "camera.json"}  # fmt: skip
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
 ID_RE = re.compile(r"^[a-z0-9-]{1,64}$")
 

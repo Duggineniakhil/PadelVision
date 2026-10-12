@@ -126,6 +126,13 @@ twice. Gate: >= 4 lines, lines on both sides of the net, the net base found, fit
 15 cm), ~1 min per template. Where they differ the hand-made one is not always right (Test_video's left wall was
 from sparse clicks). Only two courts tested.
 
+Camera movement (`court/drift.py`, `padelvision camera-check <video> --run RUN` -> camera.json, notebooks 07/08;
+the app warns): every 60 s a median background of 15 frames over 20 s; the court is re-fitted with only shift /
+rotation / zoom (4 dof; 8 free anchor points wandered 0-7 px on a still camera) and compared with the first usable
+checkpoint; moved = >= 5 px; backgrounds the court can't be fitted to (score > 2.5: cards, crowd, covered lens) are
+skipped. GX010012 condensed video: still camera 0-3 px; simulated bumps measured to ~0.2 px (4 / 6 / 8 / 15 px),
+found from 5-6 px. A moved camera is reported, not corrected: split the video and calibrate each part.
+
 Calibration notes: the lens uses a **division model** (the polynomial model couldn't straighten
 GoPro lines). Constraints can be keypoints and/or **named court lines** (`NAMED_LINES` in
 `geometry.py`); the lens and homography are refined jointly. Freeing the distortion centre
@@ -152,6 +159,7 @@ not a constraint, projects onto the net base within ~2-5 px. Near half 0.02 m, n
 .venv/Scripts/padelvision probe <video>                  # print video metadata
 .venv/Scripts/padelvision calibrate data/court_frame.png -o data/court.json   # local GUI
 .venv/Scripts/padelvision auto-calibrate data/court_background.png -o court.json  # automatic (exit 1 = unreliable)
+padelvision camera-check <video> --run runs/match1   # did the camera move (reads frames, no model)
 # Kaggle/Colab only (needs GPU + [ml]):
 padelvision analyze <video> --court court.json --out runs/match1 [--stride 2] [--max-frames 900]
 padelvision render <video> --run runs/match1 --start 0 --seconds 30   # + stats overlay (--no-hud to drop it)

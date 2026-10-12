@@ -4,6 +4,7 @@ runs/<name>/
   video.json            stage 0  video metadata
   court.json            stage 1  calibration used (copy)
   court_overlay.png     stage 1  court lines projected on a frame (check alignment)
+  camera.json           stage 1b did the camera move during the video (`camera_check`; optional)
   detections.parquet    stage 2  raw person detections + tracker ids (expensive; cached)
   detections.json       stage 2  settings the cache was made with (re-run if they differ)
   appearance.parquet    stage 2b shirt/shorts colours of the person boxes (`appearance`; optional)
@@ -89,6 +90,25 @@ def analyze(
 
     limit = min(info.frame_count, max_frames) if max_frames else info.frame_count
     return _player_stages(dets, cal, info.fps, stride, limit, out)
+
+
+def camera_check(video: str | Path, run_dir: str | Path) -> dict:
+    """Stage 1b: re-check the calibration through the video (reads frames, no model)."""
+    from padelvision.court.drift import check_camera
+
+    out = Path(run_dir)
+    result = check_camera(video, CourtCalibration.load(out / "court.json"))
+    (out / "camera.json").write_text(json.dumps(result, indent=2))
+    usable = [c for c in result["checkpoints"] if c["usable"]]
+    if result["camera_moved"]:
+        for m in result["moved"]:
+            a, b = m["between_s"]
+            print(f"[1b] CAMERA MOVED between {a:.0f} and {b:.0f} s (by ~{m['moved_px']} px): "
+                  "positions after it are off; split the video there")  # fmt: skip
+    else:
+        worst = max((c["moved_px"] for c in usable), default=0.0)
+        print(f"[1b] camera steady: {len(usable)} checkpoints, at most {worst} px from the start")
+    return result
 
 
 def appearance(video: str | Path, run_dir: str | Path) -> int:

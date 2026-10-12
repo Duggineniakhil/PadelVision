@@ -27,6 +27,8 @@ Deciding each candidate and who is who, in order of strength:
   carried across the net were tried as evidence too, but they merge people at the net and
   players aren't in position right after a changeover.)
 Every period records what decided it and the margin; the evidence is saved in stats.json.
+Rows during a changeover's walk (its crossings / net gathering +- EDGE_S) get `changeover` =
+True: who is who isn't known there, so stage 6 leaves them out of tracks and stats.
 """
 
 from __future__ import annotations
@@ -55,6 +57,7 @@ GATHER_MIN = 3
 GATHER_S = 5.0  # ... for this long
 GATHER_NEAR_S = 20.0  # a lone crossing this close to a gathering makes a likely changeover
 STATIC_M = 0.3  # tracks that never move (a net post, a bag) are not people
+EDGE_S = 5.0  # rows this close to a changeover's walk are flagged (who is who isn't known there)
 APP_MIN_SAMPLES = 6  # colour samples a slot needs in a period (3 s at 2 per second)
 APP_PAIR_MARGIN = 0.5  # colour units (1 = clearly different clothes) between swap and keep
 APP_PERSON_MARGIN = 0.3  # ... between the two ways to match a pair's members
@@ -184,8 +187,13 @@ def find_changeovers(
             continue
         if out and t - out[-1]["t"] < MIN_GAP_S:
             continue
+        lo, hi = min(c.t for c in g), max(c.t for c in g)
+        for a, b in gathers:  # the walk includes a gathering at the net around it
+            if a - GATHER_NEAR_S <= t <= b + GATHER_NEAR_S:
+                lo, hi = min(lo, a), max(hi, b)
         out.append({"t": round(t, 1), "to_far": len(to_far), "to_near": len(to_near),
-                    "chains": sorted(to_far | to_near), "evidence": evidence})  # fmt: skip
+                    "chains": sorted(to_far | to_near), "evidence": evidence,
+                    "start_s": round(lo, 1), "end_s": round(hi, 1)})  # fmt: skip
     return out
 
 
@@ -349,15 +357,18 @@ def assign_persons(
     out["pair"] = np.where(out.player <= 2, "A", "B")
 
     changeovers, still_open, overruled = [], [], 0
+    out["changeover"] = False
     for cand, per in zip(candidates, periods[1:], strict=True):
         by_colour = per["decided_by"] == "colours"
         if cand["kind"] == "changeover" and by_colour and not per["changed_ends"]:
             overruled += 1  # the walk across looked like a changeover, the colours say no
         if per["changed_ends"]:
             evidence = cand["evidence"] if cand["kind"] == "changeover" else "colours"
-            changeovers.append(
-                {"t": cand["t"], "evidence": evidence, "colours_agree": by_colour or None}
-            )
+            lo, hi = cand["start_s"] - EDGE_S, cand["end_s"] + EDGE_S
+            out.loc[out.t.between(lo, hi), "changeover"] = True
+            changeovers.append({"t": cand["t"], "evidence": evidence,
+                                "colours_agree": by_colour or None,
+                                "start_s": round(lo, 1), "end_s": round(hi, 1)})  # fmt: skip
         elif cand["kind"] == "gathering" and not by_colour:
             still_open.append({"start_s": cand["start_s"], "end_s": cand["end_s"]})
     info = {

@@ -43,7 +43,10 @@ def smooth_tracks(players: pd.DataFrame, fps: float, stride: int = 1) -> pd.Data
     """
     dt = stride / fps
     out = []
-    valid = players[players.valid].sort_values("frame").drop_duplicates(["player", "frame"])
+    valid = players[players.valid]
+    if "changeover" in valid:  # walking between ends: who is who isn't known (stage 3b)
+        valid = valid[~valid.changeover]
+    valid = valid.sort_values("frame").drop_duplicates(["player", "frame"])
     for player, p in valid.groupby("player"):
         frames = p.frame.to_numpy()
         new = np.diff(frames) / fps > MAX_GAP_S

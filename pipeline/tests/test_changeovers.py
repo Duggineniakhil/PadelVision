@@ -69,6 +69,13 @@ def test_changeover_found_and_persons_followed_across_it(cal):
     assert set(after[after.team == "near"].player) == {3, 4}
     assert set(after[after.team == "near"].slot) == {1, 2}
     assert (players.pair == np.where(players.player <= 2, "A", "B")).all()
+    # the walk between ends is flagged and left out of the smoothed tracks
+    assert players[players.t.between(*WALK)].changeover.all()
+    assert not players[(players.t < WALK[0] - 10) | (players.t > WALK[1] + 10)].changeover.any()
+    from padelvision.analytics import smooth_tracks
+
+    tracks = smooth_tracks(players, FPS)
+    assert not tracks.t.between(WALK[0] + 0.5, WALK[1] - 0.5).any()
 
 
 def test_without_changeover_person_is_the_slot(cal):

@@ -6,6 +6,7 @@ runs/<name>/
   court_overlay.png     stage 1  court lines projected on a frame (check alignment)
   detections.parquet    stage 2  raw person detections + tracker ids (expensive; cached)
   detections.json       stage 2  settings the cache was made with (re-run if they differ)
+  appearance.parquet    stage 2b shirt/shorts colours of the person boxes (`appearance`; optional)
   players.parquet       stage 3  4 player identities with court positions; player = person
                                  across changeovers (slot = side position, pair = A/B)
   tracks.parquet        stage 6  smoothed positions
@@ -89,6 +90,19 @@ def analyze(
     return _player_stages(dets, cal, info.fps, stride, limit, out)
 
 
+def appearance(video: str | Path, run_dir: str | Path) -> int:
+    """Stage 2b: shirt/shorts colours of the cached person boxes (reads the video, no model).
+    Run `restats` afterwards to use them for changeovers."""
+    from padelvision.players.appearance import extract
+
+    out = Path(run_dir)
+    fps = json.loads((out / "video.json").read_text())["fps"]
+    app = extract(video, pd.read_parquet(out / "detections.parquet"), fps)
+    app.to_parquet(out / "appearance.parquet")
+    print(f"[2b] appearance: {len(app)} box colours on {app.frame.nunique()} frames")
+    return len(app)
+
+
 def restats(run_dir: str | Path, court_json: str | Path | None = None) -> dict:
     """Re-run stages 3-7 from a run folder's cached detections. No video or GPU needed,
     so identity/metric logic can be tuned locally on detections downloaded from Kaggle.
@@ -108,7 +122,9 @@ def restats(run_dir: str | Path, court_json: str | Path | None = None) -> dict:
 
 
 def _player_stages(dets, cal, fps: float, stride: int, limit: int, out: Path) -> dict:
-    players, persons = assign_persons(assign_players(dets, cal), dets, cal, fps)
+    app_path = out / "appearance.parquet"
+    app = pd.read_parquet(app_path) if app_path.exists() else None
+    players, persons = assign_persons(assign_players(dets, cal), dets, cal, fps, app)
     players.to_parquet(out / "players.parquet")
     print(f"[3] players: {len(players)} rows, {int((~players.valid).sum())} with feet cut off")
     found = "".join(f"  {c['t']:.0f}s ({c['evidence']})" for c in persons["changeovers"])

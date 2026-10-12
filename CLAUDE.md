@@ -21,17 +21,22 @@ retraining the ball detector with this court; tracker rules can't recover undete
 
 - Players (stages 2-3, 6-7): bystander filtering, identity gating and Kalman smoothing tuned on real detections.
   Visual ID check (94 s): 0 switches; all 12 tracker-id changes were the same person picked up again.
-- Changeovers (stage 3b, `players/changeovers.py`, positions only): stage 3's ids are side slots; this finds the
-  changeovers (tracks linked through the net that cross for good, both ways = "strong", one crossing at a net
-  gathering = "likely"; gatherings without a crossing are reported as unresolved, no swap assumed) and maps slots to
-  persons per period by side habit (the slot that played more on its own left = the pair's left player; tracker ids
-  carried across the net were tried and merge people). players.parquet: `player` = person (1-2 pair A = near at the
+- Changeovers (stage 3b, `players/changeovers.py`): stage 3's ids are side slots; this finds candidate changeovers
+  from positions (tracks linked through the net that cross for good, both ways = "strong", one crossing at a net
+  gathering = "likely"; net gatherings without a crossing are candidates too) and decides each one, and which partner
+  is which, by clothing colours when `appearance.parquet` exists (stage 2b, `players/appearance.py`: median Lab of
+  shirt and shorts per person box every 0.5 s, read from the video in notebooks 07/08 with `padelvision appearance`;
+  Lab because dark kit has noisy hue and far players have a blue cast), else by positions: changeovers swap,
+  gatherings don't (reported unresolved), partners by side habit (the slot that played more on its own left = the
+  pair's left player; tracker ids carried across the net were tried and merge people). players.parquet: `player` = person (1-2 pair A = near at the
   start, 3-4 pair B), `slot` = side slot, `team` = side the row is on, `pair`; so stats, hits, speeds, heatmaps,
   HUD are per person; event/rally geometry stays side-based. stats.json `persons` holds the evidence. GX010012:
   changeovers at 40 s (likely), 283, 543 (strong), 858 s (likely) = every 2 games; side habit consistent in all 5
   periods (left share ~0.85 vs ~0.2 for pair A); 7 unresolved gatherings. Not checked against the video by eye.
   Test_video: one changeover at 98 s (likely), confirmed by eye on review frames (black-shirt pair near before,
-  white-shirt pair near after).
+  white-shirt pair near after). With colours from the review frames: shirts L 23-40 vs 136-163, the 98 s changeover
+  confirmed by colour (margin 8), its 3 net gatherings decided "no changeover" (margins 13-14), and pair B's partners
+  matched by shorts colour (side habit had swapped them). GX010012 has no appearance.parquet yet (re-run nb 07).
 - Movement (stage 6, `analytics/movement.py`): before smoothing, stretches where the raw position moves further in
   0.5 s than 8 m/s + 3 sigma (feet hidden behind the net band, the tracker moving onto another box) are dropped;
   tracks are split at tracker-id changes (on the far side a 2 m jump is within the position error); peak speed
@@ -130,6 +135,7 @@ padelvision highlights <video> --run runs/match1 [--mode top|all] [--top 5]   # 
 #   1280 wide @ <= 30 fps, calibration check/stop, stages 0-7, summary, highlights + condensed, results.zip).
 #   ml/notebooks/09_retrain_ball.ipynb: fine-tune the ball detector on a new court from v1 (train blocks: v1-tracked
 #   ball + motion pseudo-labels, + Test_video + Universe), v1 vs v2 on held-out test blocks, 200-frame eval pack.
+padelvision appearance <video> --run runs/match1   # shirt/shorts colours (no model); then restats uses them
 padelvision ball-bootstrap <video> --run runs/match1          # classical candidates + pseudo-labels
 padelvision ball-review-pack <video> --run runs/match1 --out ball_review
 padelvision ball-track <video> --run runs/match1               # stage 4: ball in play (ml/notebooks/05)

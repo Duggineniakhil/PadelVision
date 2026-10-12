@@ -131,6 +131,7 @@ const FILE_LABEL: Record<string, string> = {
   "heatmaps.png": "Heatmaps image",
   "placement.png": "Placement image",
   "court_overlay.png": "Court overlay image",
+  "appearance.parquet": "Player colours (the player stats are re-run with them)",
 };
 
 /** Replace the match's highlight videos (and images) with newer ones from the notebooks. */

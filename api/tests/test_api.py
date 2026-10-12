@@ -157,6 +157,12 @@ def test_add_highlight_files_to_an_existing_run(client):
     assert hl["file"] == "highlights.mp4" and hl["clips"][0]["rally_id"] == 1
     assert client.get(f"/api/runs/{run_id}/rallies").json()["rallies"][0]["id"] == 1  # untouched
 
+    # Player colours are accepted too (no detections in this run, so nothing is re-run).
+    upload = [("files", ("highlights.zip", _zip({"appearance.parquet": "x"}, "highlights_out")))]
+    r = client.post(f"/api/runs/{run_id}/files", files=upload)
+    assert r.json() == {"updated": ["appearance.parquet"]}
+    assert client.get(f"/api/runs/{run_id}").json()["status"] == "ready"
+
     other = dict(VIDEO, frame_count=5000)
     r = client.post(f"/api/runs/{run_id}/files", files=[("files", ("x.zip", _zip(
         {"highlights.mp4": "v", "video.json": json.dumps(other)})))])  # fmt: skip

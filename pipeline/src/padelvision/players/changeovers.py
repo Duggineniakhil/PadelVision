@@ -6,22 +6,27 @@ This stage finds the changeovers and maps each slot, in each period between them
 person: persons 1-2 are pair A (the pair on the near side at the start of the video),
 persons 3-4 pair B. Without changeovers, person == player.
 
-Positions only (no pixels):
-- Changeovers: at a changeover the players walk across the net and stay. Tracker ids that
-  pass the net are found in the raw detections (a walk around the net post is outside the
-  court, so the detections are used, not the on-court slots); a track that ends at the net
-  and one that starts there right after are linked into one chain. A changeover is a time
-  window in which chains moved for good to the other side, in both directions (or several
-  in one direction when the others were lost). A player fetching a ball over the net comes
-  back, so doesn't count.
-- Which pair member is which after a changeover: padel players keep their side (forehand
-  right / backhand left), so in each period the court-position slot that played more on its
-  own left half is the pair's left player. Seen from the camera, a near player's left is
-  image-left and a far player's left is image-right. Each person's left share is learned
-  from the periods before. (Tracker ids carried across the net were tried as evidence too, but
-  they merge people at the net and players aren't in position right after a changeover.)
-Every period's mapping carries a confidence (minutes of agreement, the margin over the
-swapped mapping) and the evidence is saved in stats.json.
+Changeovers (positions): at a changeover the players walk across the net and stay. Tracker
+  ids that pass the net are found in the raw detections (a walk around the net post is outside
+  the court, so the detections are used, not the on-court slots); a track that ends at the net
+  and one that starts there right after are linked into one chain. A changeover is a time window
+  in which chains moved for good to the other side, both ways ("strong"), or one chain at a net
+  gathering ("likely"). A player fetching a ball over the net comes back, so doesn't count. Net
+  gatherings without a crossing are candidates too: positions can't tell what happened there.
+
+Deciding each candidate and who is who, in order of strength:
+- Clothing colours (`appearance.py`, when appearance.parquet exists): each slot's median shirt
+  and shorts colour in each period is compared with each person's colours so far. A candidate
+  is a changeover if the colours on each side now match the pair that was on the other side
+  (and not if they match the pair that was there); the pair members are told apart the same
+  way. Only used when the difference is clear (APP_*_MARGIN) and there are enough samples.
+- Otherwise positions: a position-based changeover swaps the pairs, a gathering doesn't; and
+  padel players keep their side (forehand right / backhand left), so the slot that played more
+  on its own left half is the pair's left player (seen from the camera, a near player's left
+  is image-left, a far player's image-right), learned from the periods before. (Tracker ids
+  carried across the net were tried as evidence too, but they merge people at the net and
+  players aren't in position right after a changeover.)
+Every period records what decided it and the margin; the evidence is saved in stats.json.
 """
 
 from __future__ import annotations
@@ -50,6 +55,9 @@ GATHER_MIN = 3
 GATHER_S = 5.0  # ... for this long
 GATHER_NEAR_S = 20.0  # a lone crossing this close to a gathering makes a likely changeover
 STATIC_M = 0.3  # tracks that never move (a net post, a bag) are not people
+APP_MIN_SAMPLES = 6  # colour samples a slot needs in a period (3 s at 2 per second)
+APP_PAIR_MARGIN = 0.5  # colour units (1 = clearly different clothes) between swap and keep
+APP_PERSON_MARGIN = 0.3  # ... between the two ways to match a pair's members
 
 
 @dataclass
@@ -192,68 +200,173 @@ def _own_left(x: pd.Series, team: pd.Series) -> pd.Series:
     return np.where(team == "near", x < 0, x > 0)
 
 
-def assign_persons(players: pd.DataFrame, dets: pd.DataFrame, cal: CourtCalibration,
-                   fps: float) -> tuple[pd.DataFrame, dict]:  # fmt: skip
+def assign_persons(
+    players: pd.DataFrame,
+    dets: pd.DataFrame,
+    cal: CourtCalibration,
+    fps: float,
+    appearance: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame, dict]:
     """Stage 3 rows -> the same rows with `player` = person (1-4), `slot` = the stage 3 side
     slot and `pair` ("A"/"B"); `team` stays the side the row is on. And the evidence."""
+    from padelvision.players.appearance import FEATURES, distance
+
     ch = chains(dets, cal)
     cross = crossings(ch)
     gathers = gatherings(ch)
     cos = find_changeovers(cross, gathers)
+    candidates = sorted(
+        [{**c, "kind": "changeover"} for c in cos]
+        + [
+            {"t": round((g["start_s"] + g["end_s"]) / 2, 1), "kind": "gathering", **g}
+            for g in unresolved(gathers, cos)
+        ],
+        key=lambda c: c["t"],
+    )
     out = players.copy()
     t_end = float(players.t.max()) if len(players) else 0.0
-    bounds = [0.0] + [c["t"] for c in cos] + [t_end + 1.0]
+    bounds = [0.0] + [c["t"] for c in candidates] + [t_end + 1.0]
     out["period"] = np.searchsorted(bounds[1:-1], out.t.to_numpy(), side="right")
 
-    # Side preference per slot per period: share of time on the slot's own left half.
+    # Side habit per slot per period: share of time on the slot's own left half.
     valid = out[out.valid]
-    left = (valid.assign(left=_own_left(valid.x_m, valid.team))
-            .groupby(["period", "player"]).left.agg(["mean", "size"]))  # fmt: skip
+    left = (
+        valid.assign(left=_own_left(valid.x_m, valid.team))
+        .groupby(["period", "player"])
+        .left.agg(["mean", "size"])
+    )
+    # Clothing colours per slot per period: median of the sampled boxes.
+    colour: dict[tuple[int, int], np.ndarray] = {}
+    if appearance is not None and len(appearance):
+        app = out.merge(appearance, on=["frame", "track_id"], how="inner").dropna(subset=FEATURES)
+        for (k, slot), g in app.groupby(["period", "player"]):
+            if len(g) >= APP_MIN_SAMPLES:
+                colour[(int(k), int(slot))] = g[FEATURES].median().to_numpy()
 
-    periods = [{"period": 0, "start_s": 0.0, "near_pair": "A", "slots": {p: p for p in SLOT_TEAM},
-                "confidence": None}]  # fmt: skip
-    history: dict[int, list[tuple[float, float]]] = {p: [] for p in SLOT_TEAM}  # (share, minutes)
+    habit: dict[int, list[tuple[float, float]]] = {p: [] for p in SLOT_TEAM}  # (share, minutes)
+    looks: dict[int, list[np.ndarray]] = {p: [] for p in SLOT_TEAM}
 
     def learn(k: int, m: dict[int, int]) -> None:
         for slot, person in m.items():
             if (k, slot) in left.index:
                 r = left.loc[(k, slot)]
-                history[person].append((float(r["mean"]), float(r["size"]) / fps / 60))
+                habit[person].append((float(r["mean"]), float(r["size"]) / fps / 60))
+            if (k, slot) in colour:
+                looks[person].append(colour[(k, slot)])
 
-    def agreement(k: int, slot: int, person: int) -> float:
+    def habit_score(k: int, slot: int, person: int) -> float:
         """Minutes this slot played like the person's side habit, minus minutes it didn't."""
-        if (k, slot) not in left.index or not history[person]:
+        if (k, slot) not in left.index or not habit[person]:
             return 0.0
         share, minutes = left.loc[(k, slot)]["mean"], left.loc[(k, slot)]["size"] / fps / 60
-        habit = np.average([h for h, _ in history[person]],
-                           weights=[max(w, 1e-6) for _, w in history[person]])  # fmt: skip
-        return float(minutes * (1 - 2 * abs(share - habit)))
+        usual = np.average(
+            [h for h, _ in habit[person]], weights=[max(w, 1e-6) for _, w in habit[person]]
+        )
+        return float(minutes * (1 - 2 * abs(share - usual)))
 
+    def colour_cost(k: int, slots: tuple[int, int], persons: tuple[int, int]) -> float | None:
+        """Colour distance of slots[i] to persons[i] (None if anything is missing)."""
+        total = 0.0
+        for slot, person in zip(slots, persons, strict=True):
+            if (k, slot) not in colour or not looks[person]:
+                return None
+            total += distance(colour[(k, slot)], np.mean(looks[person], axis=0))
+        return total
+
+    def pair_costs(k: int, near_before, far_before) -> tuple[float, float] | None:
+        """Colour cost of "stayed" and "changed ends", from whichever slots have colours: each
+        slot is compared with the closest person of the pair that would now be on its side."""
+        stay = moved = 0.0
+        used = 0
+        for slots, same, other in (
+            ((1, 2), near_before, far_before),
+            ((3, 4), far_before, near_before),
+        ):
+            for slot in slots:
+                if (k, slot) not in colour:
+                    continue
+                d_same = [
+                    distance(colour[(k, slot)], np.mean(looks[q], axis=0)) for q in same if looks[q]
+                ]
+                d_other = [
+                    distance(colour[(k, slot)], np.mean(looks[q], axis=0))
+                    for q in other
+                    if looks[q]
+                ]
+                if d_same and d_other:
+                    stay, moved, used = stay + min(d_same), moved + min(d_other), used + 1
+        return (stay, moved) if used >= 2 else None
+
+    periods: list[dict] = [
+        {"period": 0, "start_s": 0.0, "near_pair": "A", "slots": {p: p for p in SLOT_TEAM},
+         "after": None, "changed_ends": None, "decided_by": None, "partners_by": None,
+         "margin": None}
+    ]  # fmt: skip
     learn(0, periods[0]["slots"])
     for k in range(1, len(bounds) - 1):
+        cand = candidates[k - 1]
         prev = periods[-1]["slots"]
+        near_before = (prev[1], prev[2])
+        far_before = (prev[3], prev[4])
+        # 1. Did the pairs change ends here?
+        costs = pair_costs(k, near_before, far_before)
+        margin = None
+        if costs is not None and abs(costs[0] - costs[1]) >= APP_PAIR_MARGIN:
+            margin = abs(costs[0] - costs[1])
+            diff = costs[0] - costs[1]
+        if margin is not None:
+            swap, decided_by = diff > 0, "colours"
+        else:
+            swap, decided_by = cand["kind"] == "changeover", "positions"
+        sides = {
+            (1, 2): far_before if swap else near_before,
+            (3, 4): near_before if swap else far_before,
+        }
+        # 2. Which pair member is in which slot.
         m: dict[int, int] = {}
-        margins = []
-        for here, there in (((1, 2), (3, 4)), ((3, 4), (1, 2))):
-            # The persons now on this side were on the other side before.
-            a, b = sorted(prev[s] for s in there)
-            keep = agreement(k, here[0], a) + agreement(k, here[1], b)
-            swap = agreement(k, here[0], b) + agreement(k, here[1], a)
-            m.update(zip(here, (a, b) if keep >= swap else (b, a), strict=True))
-            margins.append(abs(keep - swap))
+        who = []
+        for here, persons in sides.items():
+            a, b = sorted(persons)
+            keep, flip = colour_cost(k, here, (a, b)), colour_cost(k, here, (b, a))
+            if keep is not None and flip is not None and abs(keep - flip) >= APP_PERSON_MARGIN:
+                m.update(zip(here, (a, b) if keep <= flip else (b, a), strict=True))
+                who.append("colours")
+            else:
+                keep_h = habit_score(k, here[0], a) + habit_score(k, here[1], b)
+                flip_h = habit_score(k, here[0], b) + habit_score(k, here[1], a)
+                m.update(zip(here, (a, b) if keep_h >= flip_h else (b, a), strict=True))
+                who.append("side habit")
         learn(k, m)
-        periods.append({"period": k, "start_s": bounds[k], "near_pair": "A" if k % 2 == 0 else "B",
-                        "slots": m, "confidence": round(min(margins), 2)})  # fmt: skip
-    mapping = {p["period"]: p["slots"] for p in periods}
+        periods.append({
+            "period": k, "start_s": bounds[k], "near_pair": "A" if m[1] <= 2 else "B", "slots": m,
+            "after": cand["kind"], "changed_ends": swap, "decided_by": decided_by,
+            "partners_by": who, "margin": None if margin is None else round(margin, 2),
+        })  # fmt: skip
 
+    mapping = {p["period"]: p["slots"] for p in periods}
     out["slot"] = out.player
     out["player"] = [mapping[k][p] for k, p in zip(out.period, out.slot, strict=True)]
     out["pair"] = np.where(out.player <= 2, "A", "B")
+
+    changeovers, still_open, overruled = [], [], 0
+    for cand, per in zip(candidates, periods[1:], strict=True):
+        by_colour = per["decided_by"] == "colours"
+        if cand["kind"] == "changeover" and by_colour and not per["changed_ends"]:
+            overruled += 1  # the walk across looked like a changeover, the colours say no
+        if per["changed_ends"]:
+            evidence = cand["evidence"] if cand["kind"] == "changeover" else "colours"
+            changeovers.append(
+                {"t": cand["t"], "evidence": evidence, "colours_agree": by_colour or None}
+            )
+        elif cand["kind"] == "gathering" and not by_colour:
+            still_open.append({"start_s": cand["start_s"], "end_s": cand["end_s"]})
     info = {
-        "changeovers": cos,
+        "changeovers": changeovers,
         "periods": [{**p, "slots": {str(s): q for s, q in p["slots"].items()}} for p in periods],
         "crossings": len(cross),
-        "unresolved_gatherings": unresolved(gathers, cos),
+        "unresolved_gatherings": still_open,
+        "position_changeovers_overruled_by_colours": overruled,
+        "colours": appearance is not None and len(appearance) > 0,
         "note": "player = person: 1-2 pair A (near at the start), 3-4 pair B; slots per period map "
         "court position slots (1-2 near, 3-4 far) to persons",
     }

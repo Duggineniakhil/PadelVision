@@ -247,3 +247,15 @@ def test_camera_moved_warning(client):
     assert (
         note["level"] == "warning" and "5:00-6:00" in note["detail"] and "2.8 m" in note["detail"]
     )
+
+
+def test_changeover_decided_by_colours(client):
+    stats = dict(STATS, persons={
+        "changeovers": [{"t": 120.0, "evidence": "strong"}, {"t": 772.0, "evidence": "colours"}],
+        "unresolved_gatherings": [], "colours": True,
+    })  # fmt: skip
+    files = {"video.json": json.dumps(VIDEO), "stats.json": json.dumps(stats)}
+    d = _wait_ready(client, _import(client, files=files).json()["id"])
+    assert [c["evidence"] for c in d["changeovers"]] == ["strong", "colours"]
+    note = next(q for q in d["quality"] if q["title"].startswith("The teams changed ends"))
+    assert "12:52 (by colours)" in note["detail"] and "clothing colours" in note["detail"]

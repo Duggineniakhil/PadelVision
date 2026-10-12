@@ -184,7 +184,8 @@ def _quality(
 ) -> list[S.QualityNote]:
     notes = []
     if changeovers:
-        when = ", ".join(_clock(c.t) + ("" if c.evidence == "strong" else " (likely)")
+        tag = {"strong": "", "likely": " (likely)", "colours": " (by colours)"}
+        when = ", ".join(_clock(c.t) + tag.get(c.evidence, "")
                          for c in changeovers)  # fmt: skip
         notes.append(S.QualityNote(
             level="info", title=f"The teams changed ends {len(changeovers)} times",

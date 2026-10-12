@@ -105,7 +105,7 @@ class QualityNote(BaseModel):
 
 class Changeover(BaseModel):
     t: float  # seconds into the video
-    evidence: Literal["strong", "likely"]
+    evidence: Literal["strong", "likely", "colours"]  # colours: a net break decided by clothing
 
 
 class RunDetail(BaseModel):

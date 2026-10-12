@@ -92,7 +92,7 @@ export function OverviewPage() {
                     <div className="flex items-center gap-2">
                       <TeamDot team={p.team} />
                       <span className="font-medium text-zinc-900">Player {p.player}</span>
-                      <span className="text-xs text-zinc-500">{teamName(p.team)}</span>
+                      <span className="text-xs text-zinc-500">{teamName(p.team, run.changeovers.length > 0)}</span>
                     </div>
                   </td>
                   <td className="px-4 py-2.5 text-right text-zinc-700">{pct(p.tracked_fraction)}</td>

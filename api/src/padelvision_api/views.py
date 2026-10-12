@@ -76,6 +76,10 @@ def detail(run: Path) -> S.RunDetail:
             hits_per_rally=round(float(np.mean(hits)), 1) if hits else None,
             other_activity=len(rallies.get("other_activity", [])),
         )  # fmt: skip
+    persons = stats.get("persons") or {}
+    changeovers = [S.Changeover(t=c["t"], evidence=c["evidence"])
+                   for c in persons.get("changeovers", [])]  # fmt: skip
+    unresolved = len(persons.get("unresolved_gatherings", []))
     sp = rs.get("shot_speed_estimate")
     speed = None
     if sp is not None:
@@ -91,7 +95,8 @@ def detail(run: Path) -> S.RunDetail:
         media=sorted(n for n in MEDIA_FILES if (run / n).exists()),
         court=court, ball_coverage=coverage, players=players,
         teams=_teams(stats), rally_summary=rally_summary, speed_summary=speed,
-        quality=_quality(court, coverage, players, rally_summary, speed),
+        changeovers=changeovers, unresolved_gatherings=unresolved,
+        quality=_quality(court, coverage, players, rally_summary, speed, changeovers, unresolved),
     )  # fmt: skip
 
 
@@ -134,8 +139,30 @@ def _teams(stats: dict) -> list[S.TeamStats]:
     return out
 
 
-def _quality(court, coverage, players, rally_summary, speed) -> list[S.QualityNote]:
+def _clock(t: float) -> str:
+    return f"{int(t // 60)}:{int(t % 60):02d}"
+
+
+def _quality(
+    court, coverage, players, rally_summary, speed, changeovers=(), unresolved=0
+) -> list[S.QualityNote]:
     notes = []
+    if changeovers:
+        when = ", ".join(_clock(c.t) + ("" if c.evidence == "strong" else " (likely)")
+                         for c in changeovers)  # fmt: skip
+        notes.append(S.QualityNote(
+            level="info", title=f"The teams changed ends {len(changeovers)} times",
+            detail=f"At {when}. Players are followed across changeovers by the side of the court "
+                   "each one plays (forehand or backhand side), not by their appearance. Team A "
+                   "started on the near side.",
+        ))  # fmt: skip
+    if unresolved:
+        notes.append(S.QualityNote(
+            level="info", title=f"{unresolved} breaks at the net could not be checked",
+            detail="All players met at the net and the tracking lost them, so it can't be told "
+                   "whether the teams changed ends there. They are assumed to have kept their "
+                   "ends.",
+        ))  # fmt: skip
     if coverage is not None and coverage < BALL_COVERAGE_WARN:
         notes.append(S.QualityNote(
             level="warning", title=f"Ball found on {coverage:.0%} of frames",

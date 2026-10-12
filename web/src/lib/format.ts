@@ -35,7 +35,10 @@ export function date(iso: string): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export const teamName = (team: "near" | "far") => (team === "near" ? "Near team" : "Far team");
+/** A team's name. After changeovers a pair plays both ends, so it is named by pair: team A is the
+ * pair that started on the near side (players 1 and 2). */
+export const teamName = (team: "near" | "far", pairs = false) =>
+  pairs ? (team === "near" ? "Team A" : "Team B") : team === "near" ? "Near team" : "Far team";
 
 export const ZONE_LABEL: Record<string, string> = {
   net: "Net",

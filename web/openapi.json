@@ -1367,6 +1367,28 @@
     "title": "CalibrationInput",
     "description": "Clicked constraints (raw image pixels). `lens` given = keep that lens, else it is fitted\nfrom the lines with >= 3 points (identity if fewer than 2 such lines)."
    },
+   "Changeover": {
+    "properties": {
+     "t": {
+      "type": "number",
+      "title": "T"
+     },
+     "evidence": {
+      "type": "string",
+      "enum": [
+       "strong",
+       "likely"
+      ],
+      "title": "Evidence"
+     }
+    },
+    "type": "object",
+    "required": [
+     "t",
+     "evidence"
+    ],
+    "title": "Changeover"
+   },
    "Clip": {
     "properties": {
      "rally_id": {
@@ -2346,6 +2368,19 @@
         "type": "null"
        }
       ]
+     },
+     "changeovers": {
+      "items": {
+       "$ref": "#/components/schemas/Changeover"
+      },
+      "type": "array",
+      "title": "Changeovers",
+      "default": []
+     },
+     "unresolved_gatherings": {
+      "type": "integer",
+      "title": "Unresolved Gatherings",
+      "default": 0
      },
      "quality": {
       "items": {

@@ -6,7 +6,8 @@ runs/<name>/
   court_overlay.png     stage 1  court lines projected on a frame (check alignment)
   detections.parquet    stage 2  raw person detections + tracker ids (expensive; cached)
   detections.json       stage 2  settings the cache was made with (re-run if they differ)
-  players.parquet       stage 3  4 player identities with court positions
+  players.parquet       stage 3  4 player identities with court positions; player = person
+                                 across changeovers (slot = side position, pair = A/B)
   tracks.parquet        stage 6  smoothed positions
   stats.json            stage 6  movement metrics
   heatmaps.png          stage 7
@@ -35,7 +36,7 @@ from padelvision.ball.track import track_ball
 from padelvision.court.calibration import CourtCalibration
 from padelvision.court.draw import draw_court_overlay
 from padelvision.models import weights_path
-from padelvision.players import assign_players, run_detection
+from padelvision.players import assign_persons, assign_players, run_detection
 from padelvision.video import probe
 from padelvision.visuals import save_heatmaps, save_placement_map
 
@@ -107,9 +108,13 @@ def restats(run_dir: str | Path, court_json: str | Path | None = None) -> dict:
 
 
 def _player_stages(dets, cal, fps: float, stride: int, limit: int, out: Path) -> dict:
-    players = assign_players(dets, cal)
+    players, persons = assign_persons(assign_players(dets, cal), dets, cal, fps)
     players.to_parquet(out / "players.parquet")
     print(f"[3] players: {len(players)} rows, {int((~players.valid).sum())} with feet cut off")
+    found = "".join(f"  {c['t']:.0f}s ({c['evidence']})" for c in persons["changeovers"])
+    open_ = len(persons["unresolved_gatherings"])
+    note = f"; {open_} net gatherings unresolved (no swap assumed)" if open_ else ""
+    print(f"[3] changeovers: {len(persons['changeovers'])}{found}{note}")
 
     analysed = math.ceil(limit / stride)
     tracks = smooth_tracks(players, fps, stride)
@@ -117,6 +122,7 @@ def _player_stages(dets, cal, fps: float, stride: int, limit: int, out: Path) ->
     stats = movement_stats(tracks, players, fps, stride, analysed)
     stats["analysed"] = {"frames": analysed, "stride": stride, "duration_s": limit / fps}
     stats["court_accuracy"] = cal.accuracy()
+    stats["persons"] = persons
     (out / "stats.json").write_text(json.dumps(stats, indent=2))
     print("[6] stats.json written")
 

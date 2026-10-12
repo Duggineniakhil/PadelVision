@@ -21,6 +21,16 @@ retraining the ball detector with this court; tracker rules can't recover undete
 
 - Players (stages 2-3, 6-7): bystander filtering, identity gating and Kalman smoothing tuned on real detections.
   Visual ID check (94 s): 0 switches; all 12 tracker-id changes were the same person picked up again.
+- Changeovers (stage 3b, `players/changeovers.py`, positions only): stage 3's ids are side slots; this finds the
+  changeovers (tracks linked through the net that cross for good, both ways = "strong", one crossing at a net
+  gathering = "likely"; gatherings without a crossing are reported as unresolved, no swap assumed) and maps slots to
+  persons per period by side habit (the slot that played more on its own left = the pair's left player; tracker ids
+  carried across the net were tried and merge people). players.parquet: `player` = person (1-2 pair A = near at the
+  start, 3-4 pair B), `slot` = side slot, `team` = side the row is on, `pair`; so stats, hits, speeds, heatmaps,
+  HUD are per person; event/rally geometry stays side-based. stats.json `persons` holds the evidence. GX010012:
+  changeovers at 40 s (likely), 283, 543 (strong), 858 s (likely) = every 2 games; side habit consistent in all 5
+  periods (left share ~0.85 vs ~0.2 for pair A); 7 unresolved gatherings. Not checked against the video by eye.
+  Appearance (shirt colours) would settle unresolved gatherings but needs a pixel pass on Kaggle.
 - Ball detector: own YOLO11s (`ball-detector` in the manifest, GitHub release `ball-yolo11s-v1`, card
   `docs/models/padel_ball_yolo11s.md`), fine-tuned on Test_video pseudo-labels + Roboflow Universe data
   (`04_train_ball.ipynb`, `ball/dataset.py`); held-out 20 s blocks: recall 0.74, precision 0.85 (conf >= 0.10).
@@ -73,7 +83,7 @@ Don't invent commands for tooling that hasn't been set up; add them here once th
 
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, line snapping, drawing),
 `models/` (manifest registry, `person_tracker.py`, the only ultralytics import), `players/`
-(stage 2 detection, stage 3 on-court filtering + identities), `ball/` (bootstrap, labelling, evaluation,
+(stage 2 detection, stage 3 on-court filtering + identities, stage 3b changeovers -> persons), `ball/` (bootstrap, labelling, evaluation,
 dataset, stage 4 tracking), `events.py` (stage 5), `analytics/movement.py` + `analytics/rallies.py` (stage 6),
 `visuals.py` (heatmaps, placement map), `render.py` (preview video), `events_review.py` /
 `events_label_tool.py` / `events_eval.py` (hit/bounce labelling + scoring), `run.py` (stage orchestration).

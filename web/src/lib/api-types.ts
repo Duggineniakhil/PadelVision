@@ -478,6 +478,16 @@ export interface components {
             ][][];
             lens?: components["schemas"]["Lens"] | null;
         };
+        /** Changeover */
+        Changeover: {
+            /** T */
+            t: number;
+            /**
+             * Evidence
+             * @enum {string}
+             */
+            evidence: "strong" | "likely";
+        };
         /** Clip */
         Clip: {
             /** Rally Id */
@@ -778,6 +788,16 @@ export interface components {
             teams: components["schemas"]["TeamStats"][];
             rally_summary?: components["schemas"]["RallySummary"] | null;
             speed_summary?: components["schemas"]["SpeedSummary"] | null;
+            /**
+             * Changeovers
+             * @default []
+             */
+            changeovers: components["schemas"]["Changeover"][];
+            /**
+             * Unresolved Gatherings
+             * @default 0
+             */
+            unresolved_gatherings: number;
             /** Quality */
             quality: components["schemas"]["QualityNote"][];
         };

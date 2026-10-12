@@ -35,7 +35,10 @@ def smooth_tracks(players: pd.DataFrame, fps: float, stride: int = 1) -> pd.Data
     valid = players[players.valid].sort_values("frame").drop_duplicates(["player", "frame"])
     for player, p in valid.groupby("player"):
         frames = p.frame.to_numpy()
-        seg_ids = np.concatenate([[0], np.cumsum(np.diff(frames) / fps > MAX_GAP_S)])
+        new = np.diff(frames) / fps > MAX_GAP_S
+        if "slot" in p:  # a person moves to another court position slot at a changeover
+            new |= np.diff(p.slot.to_numpy()) != 0
+        seg_ids = np.concatenate([[0], np.cumsum(new)])
         for seg, s in p.groupby(seg_ids):
             grid = np.arange(s.frame.iloc[0], s.frame.iloc[-1] + 1, stride)
             s = s.set_index("frame").reindex(grid)

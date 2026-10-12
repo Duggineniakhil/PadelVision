@@ -93,6 +93,11 @@ class QualityNote(BaseModel):
     detail: str
 
 
+class Changeover(BaseModel):
+    t: float  # seconds into the video
+    evidence: Literal["strong", "likely"]
+
+
 class RunDetail(BaseModel):
     id: str
     name: str
@@ -109,6 +114,10 @@ class RunDetail(BaseModel):
     teams: list[TeamStats]
     rally_summary: RallySummary | None = None
     speed_summary: SpeedSummary | None = None
+    # the pairs changed ends at these times; players are persons across them, teams are pairs
+    # (A = players 1-2, the pair on the near side at the start)
+    changeovers: list[Changeover] = []
+    unresolved_gatherings: int = 0
     quality: list[QualityNote]
 
 

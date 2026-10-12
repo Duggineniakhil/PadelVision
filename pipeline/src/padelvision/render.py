@@ -133,7 +133,9 @@ def _draw_rally(img, rallies: list[dict], events: pd.DataFrame, frame: int) -> N
 def draw_players(img, canvas, mini: MiniCourt, rows: pd.DataFrame) -> None:
     """Player boxes with labels on the video, and their court positions on the mini court."""
     for r in rows.itertuples():
-        color = TEAM_COLORS[r.team]
+        # colour by pair (A started near) so a person keeps their colour after changing ends
+        pair = getattr(r, "pair", None)
+        color = TEAM_COLORS[r.team if pair is None else ("near" if pair == "A" else "far")]
         p1, p2 = (round(r.x1), round(r.y1)), (round(r.x2), round(r.y2))
         cv2.rectangle(img, p1, p2, color, 2)
         label = f"P{r.player}" + ("" if r.valid else " (feet cut)")

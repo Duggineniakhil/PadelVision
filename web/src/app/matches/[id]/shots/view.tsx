@@ -41,7 +41,7 @@ export function ShotsPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         {(["near", "far"] as const).map((team) => (
-          <Placement key={team} team={team} shots={shots} />
+          <Placement key={team} team={team} shots={shots} bySide={run.changeovers.length > 0} />
         ))}
       </div>
 
@@ -60,7 +60,10 @@ export function ShotsPage() {
   );
 }
 
-function Placement({ team, shots }: { team: "near" | "far"; shots: Shot[] }) {
+/** Landings of the shots hit from one side of the net. After changeovers both pairs played from each
+ * side, so the card is about the side, not a team. */
+function Placement({ team, shots, bySide }: { team: "near" | "far"; shots: Shot[]; bySide: boolean }) {
+  const what = bySide ? `shots hit from the ${team} side` : `${teamName(team).toLowerCase()}'s shots`;
   const mine = shots.filter((s) => s.team === team);
   const landed = mine.filter((s) => s.bounce);
   const counts = Object.fromEntries(ZONES.map((z) => [z, landed.filter((s) => s.bounce!.zone === z).length]));
@@ -68,13 +71,13 @@ function Placement({ team, shots }: { team: "near" | "far"; shots: Shot[] }) {
     <Card
       title={
         <span className="flex items-center gap-2">
-          <TeamDot team={team} /> Where the {teamName(team).toLowerCase()}&apos;s shots landed
+          <TeamDot team={team} /> Where the {what} landed
         </span>
       }
       description={`${landed.length} of ${mine.length} landings seen, on the other side of the net`}
     >
       <div className="grid grid-cols-[180px_1fr] items-center gap-6">
-        <CourtSvg label={`Landing points of the ${teamName(team).toLowerCase()}'s shots`} className="w-full">
+        <CourtSvg label={`Landing points of the ${what}`} className="w-full">
           <LandingLayer shots={shots} team={team} />
         </CourtSvg>
         <div className="space-y-3">

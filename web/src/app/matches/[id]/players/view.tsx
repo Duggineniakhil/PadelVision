@@ -10,23 +10,27 @@ export function PlayersPage() {
   const { id, data: run, ready } = useMatch();
   const { data: tracks } = useTracks(id, ready);
   if (!run) return null;
+  const pairs = run.changeovers.length > 0;
 
   return (
     <div className="space-y-5">
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {run.players.map((p) => {
           const tr = tracks?.players[String(p.player)];
-          return <PlayerCard key={p.player} player={p} track={tracks ? tr ?? null : undefined} />;
+          return (
+            <PlayerCard key={p.player} player={p} pairs={pairs} track={tracks ? tr ?? null : undefined} />
+          );
         })}
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
         {run.teams.map((t) => (
-          <TeamCard key={t.team} team={t} />
+          <TeamCard key={t.team} team={t} pairs={pairs} />
         ))}
       </div>
       <p className="text-xs text-zinc-500">
-        Players are numbered by side of the net (1–2 near the camera, 3–4 far). When teams change ends, the
-        numbers stay with the side, not the person.
+        {pairs
+          ? `The teams changed ends ${run.changeovers.length} times. Each player is followed across the changeovers by the side of the court they play (forehand or backhand side); team A (players 1 and 2) started near the camera.`
+          : "Players 1–2 are near the camera, 3–4 far."}
       </p>
     </div>
   );
@@ -34,9 +38,11 @@ export function PlayersPage() {
 
 function PlayerCard({
   player: p,
+  pairs,
   track,
 }: {
   player: PlayerStats;
+  pairs: boolean;
   track: { x: number[]; y: number[] } | null | undefined;
 }) {
   const ok = !p.insufficient_data;
@@ -46,7 +52,7 @@ function PlayerCard({
         <div className="flex items-center gap-2">
           <TeamDot team={p.team} />
           <h2 className="text-sm font-semibold text-zinc-900">Player {p.player}</h2>
-          <span className="text-xs text-zinc-500">{teamName(p.team)}</span>
+          <span className="text-xs text-zinc-500">{teamName(p.team, pairs)}</span>
         </div>
         <span className="tabular text-xs text-zinc-500">tracked {pct(p.tracked_fraction)}</span>
       </header>
@@ -139,12 +145,12 @@ const FORMATION_LABEL: Record<string, string> = {
   other: "One in transition",
 };
 
-function TeamCard({ team: t }: { team: TeamStats }) {
+function TeamCard({ team: t, pairs }: { team: TeamStats; pairs: boolean }) {
   return (
     <Card
       title={
         <span className="flex items-center gap-2">
-          <TeamDot team={t.team} /> {teamName(t.team)} · players {t.team === "near" ? "1 and 2" : "3 and 4"}
+          <TeamDot team={t.team} /> {teamName(t.team, pairs)} · players {t.team === "near" ? "1 and 2" : "3 and 4"}
         </span>
       }
       description="Where the partners stand relative to each other"

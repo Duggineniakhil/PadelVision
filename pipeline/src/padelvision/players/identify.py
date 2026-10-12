@@ -3,9 +3,8 @@
 - Foot point = bottom-centre of the box, projected to court metres.
 - Only people whose feet are on the court (+ margin) are kept: spectators, coaches
   and people behind the glass are dropped.
-- Team = side of the net. Players 1-2 are on the near side, 3-4 on the far side.
-  Teams swap ends during a match; until appearance-based re-identification exists,
-  ids mean "near/far side slot", not a specific person across changeovers.
+- Team = side of the net. Players 1-2 are on the near side, 3-4 on the far side. These are
+  side slots: stage 3b (`changeovers.py`) turns them into persons across changeovers.
 - Within a side, a slot keeps following its tracker id. When a new tracker id appears,
   it takes the free slot whose last position is closest, but only if the person could
   physically have got there (no hopping between bystanders on opposite sides of the court).

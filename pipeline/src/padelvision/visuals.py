@@ -26,6 +26,7 @@ def save_heatmaps(tracks: pd.DataFrame, stats: dict, path: str | Path) -> None:
     ybins = np.arange(-hl, hl + BIN_M, BIN_M)
 
     fig, axes = plt.subplots(1, 4, figsize=(12, 6.5), facecolor="#0f172a")
+    changed = bool(stats.get("persons", {}).get("changeovers"))
     for ax, player in zip(axes, SLOT_TEAM, strict=True):
         ax.set_facecolor("#1e3a5f")
         info = stats["players"][str(player)]
@@ -50,7 +51,9 @@ def save_heatmaps(tracks: pd.DataFrame, stats: dict, path: str | Path) -> None:
         ax.set_ylim(-hl, hl)
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title(f"Player {player} ({SLOT_TEAM[player]})", color="white")
+        # after changeovers a pair plays both ends: name it by pair (A started near)
+        team = ("team A" if player <= 2 else "team B") if changed else SLOT_TEAM[player]
+        ax.set_title(f"Player {player} ({team})", color="white")
         ax.text(0, -hl + 0.3, "camera side", color="#94a3b8", ha="center", fontsize=8)
     fig.tight_layout()
     fig.savefig(path, dpi=110, facecolor=fig.get_facecolor())
@@ -149,10 +152,12 @@ def rally_card(
         ax.set_yticks([])
         ax.set_aspect("equal")
 
-    for i, (player, team) in enumerate(SLOT_TEAM.items()):
+    for i, player in enumerate(SLOT_TEAM):
         ax = fig.add_subplot(grid[0, i])
         court(ax)
         pts = in_rally[in_rally.player == player]
+        # players are persons: the side they played this rally on, not a fixed one
+        team = SLOT_TEAM[player] if pts.empty else ("near" if pts.y.median() < 0 else "far")
         if len(pts) / fps < CARD_MIN_TRACKED_S:
             ax.text(0, 0, "not enough\ndata", color="white", ha="center", va="center", fontsize=9)
         else:
@@ -168,7 +173,7 @@ def rally_card(
     mine = [s for s in shots if rally["start_frame"] <= s["frame"] <= rally["end_frame"]]
     landed = 0
     for n, s in enumerate(mine, start=1):
-        color = PLACEMENT_COLORS[s["team"]]
+        color = PLACEMENT_COLORS["near" if s["player"] <= 2 else "far"]  # by pair, as the boxes
         start, b = s.get("hitter_xy"), s.get("bounce")
         if start is not None and b is not None:
             landed += 1

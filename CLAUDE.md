@@ -101,7 +101,8 @@ retraining the ball detector with this court; tracker rules can't recover undete
 
 Don't invent commands for tooling that hasn't been set up; add them here once they exist.
 
-Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, line snapping, drawing),
+Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, line snapping, automatic
+calibration, drawing),
 `models/` (manifest registry, `person_tracker.py`, the only ultralytics import), `players/`
 (stage 2 detection, stage 3 on-court filtering + identities, stage 3b changeovers -> persons), `ball/` (bootstrap, labelling, evaluation,
 dataset, stage 4 tracking), `events.py` (stage 5), `analytics/points.py` (stage 5b: serves, points, games),
@@ -109,6 +110,21 @@ dataset, stage 4 tracking), `events.py` (stage 5), `analytics/points.py` (stage 
 `visuals.py` (heatmaps, placement map), `render.py` (preview video), `events_review.py` /
 `events_label_tool.py` / `events_eval.py` (hit/bounce labelling + scoring), `run.py` (stage orchestration).
 The tuning constants (smoothing windows, speed caps, zones, margins) sit at the top of each module.
+
+Automatic calibration (`court/auto.py`, `padelvision auto-calibrate <image|video>`, notebook 08 when no
+calibration is given, web "Detect automatically"): evidence from a background image = painted lines (top-hat, low
+saturation, on the floor only), the floor (Lab a/b distance to the colour at the bottom middle; outer outline only:
+glare makes holes) and the net base (dark mesh above, floor below; the net's white top band looks like a painted
+line, and without the net the far lines slipped by one and still fit at 1.3 px). Rough placement: start from each
+`ml/calibrations/*.json` (same camera type), coarse grid of shift/scale/far-pair moves + Nelder-Mead on 4 anchor
+points with the template lens, scored by truncated chamfer distance + floor inside/outside the court. Precise fit:
+snap every named line along its projection (wall lines first to the floor outline, then 3 px to the image edge;
+net base on its own ridge), refit with the template lens KEPT (refitting it bent the image edges and overfitted),
+twice. Gate: >= 4 lines, lines on both sides of the net, the net base found, fit <= 2.5 px, near half <= 15 cm.
+`net_base` (y = 0 on the floor) is a named line. Leave-one-out (each court from the other's calibration): Test_video
+3.0 px median from the hand-made calibration (ground 8 / 7 / 31 cm near / net / far), GX010012 5.1 px (6 / 14 /
+15 cm), ~1 min per template. Where they differ the hand-made one is not always right (Test_video's left wall was
+from sparse clicks). Only two courts tested.
 
 Calibration notes: the lens uses a **division model** (the polynomial model couldn't straighten
 GoPro lines). Constraints can be keypoints and/or **named court lines** (`NAMED_LINES` in
@@ -135,6 +151,7 @@ not a constraint, projects onto the net base within ~2-5 px. Near half 0.02 m, n
 .venv/Scripts/python scripts/fetch_models.py [name ...]  # download + verify weights
 .venv/Scripts/padelvision probe <video>                  # print video metadata
 .venv/Scripts/padelvision calibrate data/court_frame.png -o data/court.json   # local GUI
+.venv/Scripts/padelvision auto-calibrate data/court_background.png -o court.json  # automatic (exit 1 = unreliable)
 # Kaggle/Colab only (needs GPU + [ml]):
 padelvision analyze <video> --court court.json --out runs/match1 [--stride 2] [--max-frames 900]
 padelvision render <video> --run runs/match1 --start 0 --seconds 30   # + stats overlay (--no-hud to drop it)

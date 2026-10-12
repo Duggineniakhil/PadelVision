@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from padelvision.models import registry
 
@@ -37,6 +38,34 @@ def _cmd_calibrate(args: argparse.Namespace) -> int:
     from padelvision.court.calibrate_tool import run
 
     return 0 if run(args.image, args.out) else 1
+
+
+def _cmd_auto_calibrate(args: argparse.Namespace) -> int:
+    import cv2
+
+    from padelvision.court.auto import auto_calibrate
+    from padelvision.video import VIDEO_EXTENSIONS, median_background
+
+    src = Path(args.source)
+    if src.suffix.lower() in VIDEO_EXTENSIONS:
+        _, image = median_background(src)  # players removed
+    else:
+        image = cv2.imread(str(src))
+        if image is None:
+            print(f"Cannot read {src}")
+            return 1
+    result = auto_calibrate(image, args.templates or None)
+    if result.calibration is None:
+        print("Court not found: " + "; ".join(result.reasons))
+        return 1
+    print(f"started from {result.template}; lines found: {result.lines}")
+    print(f"court: {result.calibration.accuracy_summary()}")
+    if not result.ok:
+        print("NOT reliable: " + "; ".join(result.reasons))
+    if result.ok or args.force:
+        result.calibration.save(args.out)
+        print(f"saved {args.out}" + ("" if result.ok else " (check it on the Calibrate page)"))
+    return 0 if result.ok else 1
 
 
 def _cmd_analyze(args: argparse.Namespace) -> int:
@@ -200,6 +229,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("image", help="a frame from the video, e.g. data/court_frame.png")
     p.add_argument("-o", "--out", default="data/court.json")
     p.set_defaults(func=_cmd_calibrate)
+
+    p = sub.add_parser("auto-calibrate", help="find the court automatically (image or video)")
+    p.add_argument("source", help="a background image of the court, or the video itself")
+    p.add_argument("-o", "--out", default="court.json")
+    p.add_argument(
+        "--templates", nargs="*", help="calibrations to start from (default: ml/calibrations)"
+    )
+    p.add_argument("--force", action="store_true", help="save even when the quality checks fail")
+    p.set_defaults(func=_cmd_auto_calibrate)
 
     p = sub.add_parser("analyze", help="run player analytics on a video (GPU recommended)")
     p.add_argument("video")

@@ -265,6 +265,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/calibration/auto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Auto Calibration
+         * @description Find the court automatically in a calibration image (takes a minute or two).
+         */
+        post: operations["auto_calibration_api_calibration_auto_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/calibration/fit": {
         parameters: {
             query?: never;
@@ -351,6 +371,30 @@ export interface components {
         AttachVideo: {
             /** Path */
             path: string;
+        };
+        /**
+         * AutoCalibration
+         * @description The court found automatically. `ok` = it passed the quality checks; otherwise `reasons`
+         *     say why, and `calibration` (if any) is a starting point to correct by hand.
+         */
+        AutoCalibration: {
+            /** Ok */
+            ok: boolean;
+            /** Reasons */
+            reasons: string[];
+            /** Template */
+            template?: string | null;
+            /** Lines */
+            lines: {
+                [key: string]: number;
+            };
+            calibration?: components["schemas"]["CalibrationInput"] | null;
+            accuracy?: components["schemas"]["CalibrationAccuracy"] | null;
+        };
+        /** AutoRequest */
+        AutoRequest: {
+            /** Image Id */
+            image_id: string;
         };
         /** Body_add_files_api_runs__run_id__files_post */
         Body_add_files_api_runs__run_id__files_post: {
@@ -1577,6 +1621,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SnapResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auto_calibration_api_calibration_auto_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutoRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoCalibration"];
                 };
             };
             /** @description Validation Error */

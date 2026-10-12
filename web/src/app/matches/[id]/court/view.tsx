@@ -8,11 +8,12 @@ import {
   saveRunCourt,
   useRunCourt,
   type CalibrationImage,
+  type CalibrationInput,
   type RunCourt,
 } from "@/lib/api";
 import { num } from "@/lib/format";
 import { useMatch } from "@/components/match";
-import { CalibrationEditor, CourtImageDrop, downloadJson, type EditorState } from "@/components/calibration";
+import { AutoDetect, CalibrationEditor, CourtImageDrop, downloadJson, type EditorState } from "@/components/calibration";
 import { Button, Callout, Dialog, Skeleton, Spinner } from "@/components/ui";
 
 export function CourtPage() {
@@ -41,6 +42,7 @@ function CourtEditor({ court, hasVideo }: { court: RunCourt; hasVideo: boolean }
   const [loading, setLoading] = useState(hasVideo);
   const [bgError, setBgError] = useState<string | null>(null);
   const [version, setVersion] = useState(0); // bumped to discard edits
+  const [detected, setDetected] = useState<CalibrationInput | null>(null);
   const [w, h] = court.video_size;
 
   useEffect(() => {
@@ -95,16 +97,28 @@ function CourtEditor({ court, hasVideo }: { court: RunCourt; hasVideo: boolean }
           </div>
         )
       ) : (
-        <CalibrationEditor key={`${image.id}-${version}`} image={image} initial={court.calibration ?? null}>
+        <>
+        <AutoDetect
+          image={image}
+          onResult={(cal) => {
+            setDetected(cal);
+            setVersion((v) => v + 1);
+          }}
+        />
+        <CalibrationEditor key={`${image.id}-${version}`} image={image} initial={detected ?? court.calibration ?? null}>
           {(state) => (
             <Actions
               state={state}
               court={court}
-              onDiscard={() => setVersion((v) => v + 1)}
+              onDiscard={() => {
+                setDetected(null);
+                setVersion((v) => v + 1);
+              }}
               onOtherImage={() => setImage(null)}
             />
           )}
         </CalibrationEditor>
+        </>
       )}
     </div>
   );

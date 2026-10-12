@@ -8,6 +8,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
+
 
 @dataclass(frozen=True)
 class VideoInfo:

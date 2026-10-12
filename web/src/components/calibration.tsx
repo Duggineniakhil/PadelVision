@@ -1,19 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Image as ImageIcon, Maximize, Minus, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
+import { Image as ImageIcon, Maximize, Minus, Plus, Redo2, Trash2, Undo2, Wand2 } from "lucide-react";
 import {
   calibrationImageUrl,
   fitCalibration,
+  autoCalibrate,
   snapLine,
   uploadCalibrationImage,
+  type AutoCalibration,
   type CalibrationFit,
   type CalibrationImage,
   type CalibrationInput,
 } from "@/lib/api";
 import { CAL_LINES, CAL_POINTS, COURT_L, COURT_LINES, COURT_W, NET, type CalLine, type CalPoint } from "@/lib/court";
 import { num } from "@/lib/format";
-import { Badge, Button, Kbd, Spinner, cx } from "./ui";
+import { Badge, Button, Callout, Kbd, Spinner, cx } from "./ui";
 
 type Pt = [number, number];
 type SnapMode = "paint" | "edge" | "off";
@@ -370,7 +372,7 @@ function ConstraintList({
                     ) : info.pts.length >= 2 ? (
                       <>
                         {info.pts.length} points ·{" "}
-                        {info.source === "snapped" ? "snapped" : info.source === "loaded" ? "from the saved calibration" : "as clicked"}
+                        {info.source === "snapped" ? "snapped" : info.source === "loaded" ? "loaded (detected or opened)" : "as clicked"}
                       </>
                     ) : (doc.guides[l.name]?.length ?? 0) === 1 ? (
                       "1 point: add another"
@@ -964,6 +966,69 @@ function LensPanel({
 }
 
 // --- shared pieces for the pages ---------------------------------------------------------------
+/** "Detect automatically": finds the court and hands the result to the editor to check. */
+export function AutoDetect({
+  image,
+  onResult,
+}: {
+  image: CalibrationImage;
+  onResult: (calibration: CalibrationInput) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<AutoCalibration | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const r = await autoCalibrate(image.id);
+      setResult(r);
+      if (r.calibration) onResult(r.calibration);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(false);
+  };
+  const found = result ? Object.keys(result.lines).length : 0;
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={run} disabled={busy}>
+          {busy ? <Spinner /> : <Wand2 className="size-4" />}
+          {busy ? "Looking for the court…" : "Detect automatically"}
+        </Button>
+        <span className="text-xs text-zinc-500">
+          {busy
+            ? "Fitting the court to the painted lines, the floor and the net. This takes a minute or two."
+            : "Finds the court lines for you; check them before saving."}
+        </span>
+      </div>
+      {error && (
+        <Callout level="warning" title="Detection failed">
+          {error}
+        </Callout>
+      )}
+      {result &&
+        (result.ok ? (
+          <Callout level="info" title={`Court found: ${found} lines, fit ${num(result.accuracy?.rms_px, 1)} px`}>
+            It passed the quality checks. Check that the yellow court sits on the real lines, then save or copy it.
+          </Callout>
+        ) : (
+          <Callout
+            level="warning"
+            title={result.calibration ? "Court found, but not reliably" : "The court was not found"}
+          >
+            {result.reasons.join("; ")}.{" "}
+            {result.calibration
+              ? "The lines it found are loaded below: fix the ones that are off."
+              : "Place the lines by hand."}
+          </Callout>
+        ))}
+    </div>
+  );
+}
+
 /** Drop or choose a court image (png/jpg) or notebook 08's calibration.zip. */
 export function CourtImageDrop({
   onImage,

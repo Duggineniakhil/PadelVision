@@ -794,6 +794,45 @@
     }
    }
   },
+  "/api/calibration/auto": {
+   "post": {
+    "summary": "Auto Calibration",
+    "description": "Find the court automatically in a calibration image (takes a minute or two).",
+    "operationId": "auto_calibration_api_calibration_auto_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AutoRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AutoCalibration"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/calibration/fit": {
    "post": {
     "summary": "Fit",
@@ -1024,6 +1063,80 @@
      "path"
     ],
     "title": "AttachVideo"
+   },
+   "AutoCalibration": {
+    "properties": {
+     "ok": {
+      "type": "boolean",
+      "title": "Ok"
+     },
+     "reasons": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Reasons"
+     },
+     "template": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Template"
+     },
+     "lines": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Lines"
+     },
+     "calibration": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CalibrationInput"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "accuracy": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CalibrationAccuracy"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "ok",
+     "reasons",
+     "lines"
+    ],
+    "title": "AutoCalibration",
+    "description": "The court found automatically. `ok` = it passed the quality checks; otherwise `reasons`\nsay why, and `calibration` (if any) is a starting point to correct by hand."
+   },
+   "AutoRequest": {
+    "properties": {
+     "image_id": {
+      "type": "string",
+      "title": "Image Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "image_id"
+    ],
+    "title": "AutoRequest"
    },
    "Body_add_files_api_runs__run_id__files_post": {
     "properties": {

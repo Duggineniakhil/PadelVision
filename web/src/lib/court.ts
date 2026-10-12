@@ -32,7 +32,8 @@ export type CalLine =
   | "left_side"
   | "right_side"
   | "near_baseline"
-  | "far_baseline";
+  | "far_baseline"
+  | "net_base";
 
 /** Lines in the order the calibration page lists them; `mode` = how a click snaps by default. */
 export const CAL_LINES: { name: CalLine; label: string; hint: string; seg: Seg; mode: "paint" | "edge" }[] = [
@@ -42,6 +43,7 @@ export const CAL_LINES: { name: CalLine; label: string; hint: string; seg: Seg; 
   { name: "left_side", label: "Left side", hint: "Where the floor meets the left wall or fence", seg: [[-HW, -HL], [-HW, HL]], mode: "edge" },
   { name: "right_side", label: "Right side", hint: "Where the floor meets the right wall or fence", seg: [[HW, -HL], [HW, HL]], mode: "edge" },
   { name: "far_baseline", label: "Far baseline", hint: "Where the floor meets the back wall", seg: [[-HW, HL], [HW, HL]], mode: "edge" },
+  { name: "net_base", label: "Net", hint: "Where the net meets the floor (not its top band)", seg: [[-HW, 0], [HW, 0]], mode: "edge" },
   { name: "near_baseline", label: "Near baseline", hint: "Usually out of view for a low camera", seg: [[-HW, -HL], [HW, -HL]], mode: "edge" },
 ];
 

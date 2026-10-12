@@ -218,6 +218,15 @@ def snap(body: S.SnapRequest) -> S.SnapResult:
         raise _cal_error(e) from e
 
 
+@app.post("/api/calibration/auto", response_model=S.AutoCalibration)
+def auto_calibration(body: S.AutoRequest) -> S.AutoCalibration:
+    """Find the court automatically in a calibration image (takes a minute or two)."""
+    try:
+        return calibration.auto(body.image_id)
+    except calibration.CalibrationError as e:
+        raise HTTPException(404, str(e)) from e
+
+
 @app.post("/api/calibration/fit", response_model=S.CalibrationFit)
 def fit(body: S.CalibrationInput) -> S.CalibrationFit:
     try:

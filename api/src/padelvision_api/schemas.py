@@ -296,6 +296,22 @@ class CalibrationImage(BaseModel):
     source: Literal["upload", "video"]
 
 
+class AutoRequest(BaseModel):
+    image_id: str
+
+
+class AutoCalibration(BaseModel):
+    """The court found automatically. `ok` = it passed the quality checks; otherwise `reasons`
+    say why, and `calibration` (if any) is a starting point to correct by hand."""
+
+    ok: bool
+    reasons: list[str]
+    template: str | None = None  # the saved calibration the search started from
+    lines: dict[str, int]  # points snapped per court line
+    calibration: CalibrationInput | None = None
+    accuracy: CalibrationAccuracy | None = None
+
+
 class SnapRequest(BaseModel):
     image_id: str
     guide: list[Point]

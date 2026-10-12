@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Download, FileJson, RotateCcw } from "lucide-react";
 import type { CalibrationImage, CalibrationInput } from "@/lib/api";
-import { CalibrationEditor, CourtImageDrop, downloadJson, parseCourtJson } from "@/components/calibration";
+import { AutoDetect, CalibrationEditor, CourtImageDrop, downloadJson, parseCourtJson } from "@/components/calibration";
 import { Button, Callout } from "@/components/ui";
 
 export function CalibratePage() {
   const [image, setImage] = useState<CalibrationImage | null>(null);
   const [initial, setInitial] = useState<CalibrationInput | null>(null);
+  const [rev, setRev] = useState(0); // bumped to load a new starting calibration into the editor
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const jsonInput = useRef<HTMLInputElement>(null);
@@ -26,6 +27,7 @@ export function CalibratePage() {
           `That calibration was made on a ${cal.image_size[0]}×${cal.image_size[1]} image; this one is ${image.width}×${image.height}.`,
         );
       setInitial(cal);
+      setRev((r) => r + 1);
       setJsonError(null);
     } catch (e) {
       setJsonError((e as Error).message);
@@ -101,7 +103,16 @@ export function CalibratePage() {
         </div>
       ) : (
         <div className="mt-6">
-          <CalibrationEditor key={`${image.id}-${initial ? "json" : "new"}`} image={image} initial={initial}>
+          <div className="mb-4">
+            <AutoDetect
+              image={image}
+              onResult={(cal) => {
+                setInitial(cal);
+                setRev((r) => r + 1);
+              }}
+            />
+          </div>
+          <CalibrationEditor key={`${image.id}-${rev}`} image={image} initial={initial}>
             {({ fit, fitError }) => (
               <section className="rounded-lg border border-zinc-200 bg-white px-4 py-3">
                 <h2 className="text-sm font-semibold text-zinc-900">Use it</h2>

@@ -150,7 +150,11 @@ installs the package and fetches the weights itself.
 | [`09_retrain_ball`](ml/notebooks/09_retrain_ball.ipynb) | Fine-tunes the ball detector on a new court, compares old and new models, and builds an evaluation pack |
 | `00`–`05` | Setup check, player analytics, ball label bootstrap, detector bake-off, ball training, ball tracking |
 
-A new camera position needs a court calibration once. Without one, notebook 08 stops and saves
+A new camera position needs a court calibration once. Notebook 08 first looks for the court **automatically**: it
+fits the court's shape to the painted lines, the floor and the net, starting from the calibrations already in
+`ml/calibrations/`, and uses the result only if it passes quality checks (fit, lines on both sides of the net, the
+net found, near-half accuracy). The Calibrate page has the same **Detect automatically** button. If detection fails,
+notebook 08 stops and saves
 `calibration.zip` (a frame and a background with the players removed). Open it on the web app's **Calibrate**
 page: pick a court line, click two or more points along it and the clicks snap onto the painted line or wall
 edge; the fitted court is drawn live with its accuracy per zone. Copy the result into the notebook's

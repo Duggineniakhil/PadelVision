@@ -72,6 +72,8 @@ NAMED_LINES: dict[str, tuple[float, float, float]] = {
     "far_service_line": (0.0, 1.0, -_S),
     "near_baseline": (0.0, 1.0, _HL),
     "far_baseline": (0.0, 1.0, -_HL),
+    # Where the net meets the floor (the net itself stands up, only its base is on the ground).
+    "net_base": (0.0, 1.0, 0.0),
 }
 
 # Zones by distance from the net (|y|). Net play happens inside NET_ZONE_M; back-court is

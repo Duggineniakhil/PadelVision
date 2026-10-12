@@ -110,6 +110,29 @@ def snap(body: S.SnapRequest) -> list[tuple[float, float]]:
     return snap_line(_image(str(p), p.stat().st_mtime), body.guide, body.mode)
 
 
+def auto(image_id: str) -> S.AutoCalibration:
+    """Find the court in a calibration image (`padelvision.court.auto`; 1-3 min)."""
+    from padelvision.court.auto import auto_calibrate
+
+    p = image_path(image_id)
+    result = auto_calibrate(_image(str(p), p.stat().st_mtime))
+    cal = result.calibration
+    body = None
+    if cal is not None:
+        d = cal.to_dict()
+        body = S.CalibrationInput(
+            image_size=tuple(d["image_size"]),
+            image_points=d["image_points"],
+            named_lines=d["named_lines"],
+            lines=d["lines"],
+            lens=d["lens"],
+        )
+    return S.AutoCalibration(
+        ok=result.ok, reasons=result.reasons, template=result.template, lines=result.lines,
+        calibration=body, accuracy=_accuracy(result.accuracy) if result.accuracy else None,
+    )  # fmt: skip
+
+
 def _calibration(body: S.CalibrationInput):
     from padelvision.court import CourtCalibration, LensModel
 

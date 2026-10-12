@@ -192,6 +192,12 @@ export function uploadCalibrationImage(file: File) {
 export const snapLine = (imageId: string, guide: [number, number][], mode: "paint" | "edge") =>
   request<Schemas["SnapResult"]>("/api/calibration/snap", json("POST", { image_id: imageId, guide, mode }));
 
+export type AutoCalibration = Schemas["AutoCalibration"];
+
+/** Find the court automatically in a calibration image (takes a minute or two). */
+export const autoCalibrate = (imageId: string) =>
+  request<AutoCalibration>("/api/calibration/auto", json("POST", { image_id: imageId }));
+
 export const fitCalibration = (body: CalibrationInput) =>
   request<CalibrationFit>("/api/calibration/fit", json("POST", body));
 

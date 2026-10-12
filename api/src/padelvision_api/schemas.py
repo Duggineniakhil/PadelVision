@@ -87,6 +87,16 @@ class SpeedSummary(BaseModel):
     note: str | None = None
 
 
+class PointsSummary(BaseModel):
+    serves: int
+    confirmed_serves: int  # the serve's landing was seen in the diagonal service box
+    faults_suspected: int
+    points: int
+    second_serves: int
+    games: int | None = None  # only when the estimate passes padel's rules checks
+    games_note: str
+
+
 class QualityNote(BaseModel):
     level: Literal["info", "warning"]
     title: str
@@ -114,6 +124,7 @@ class RunDetail(BaseModel):
     teams: list[TeamStats]
     rally_summary: RallySummary | None = None
     speed_summary: SpeedSummary | None = None
+    points_summary: PointsSummary | None = None
     # the pairs changed ends at these times; players are persons across them, teams are pairs
     # (A = players 1-2, the pair on the near side at the start)
     changeovers: list[Changeover] = []

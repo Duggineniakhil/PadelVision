@@ -16,11 +16,12 @@ export function OverviewPage() {
   if (!run) return null;
   const rs = run.rally_summary;
   const sp = run.speed_summary;
+  const pts = run.points_summary;
   const matchS = run.video?.duration_s ?? 0;
 
   return (
     <div className="space-y-5">
-      <Card bodyClassName="grid grid-cols-2 gap-x-6 gap-y-5 p-5 md:grid-cols-3 xl:grid-cols-6">
+      <Card bodyClassName="grid grid-cols-2 gap-x-6 gap-y-5 p-5 md:grid-cols-4">
         <Stat label="Match length" value={duration(matchS)} hint={run.video ? `${run.video.frame_count.toLocaleString("en-GB")} frames` : undefined} />
         <Stat label="Rallies" value={num(rs?.count)} hint={rs ? `${duration(rs.total_s)} of play` : undefined} />
         <Stat label="Shots in rallies" value={num(rs?.hits_total)} hint={rs?.hits_per_rally != null ? `${num(rs.hits_per_rally, 1)} per rally` : undefined} />
@@ -31,6 +32,16 @@ export function OverviewPage() {
           hint={sp?.median_kmh != null ? `median ${num(sp.median_kmh)} km/h · ${sp.samples} shots` : "not enough measured shots"}
         />
         <Stat label="Ball found" value={pct(run.ball_coverage)} hint="share of frames" />
+        <Stat
+          label="Points"
+          value={num(pts?.points)}
+          hint={pts ? `from ${pts.serves} serves found, ${pts.confirmed_serves} confirmed` : undefined}
+        />
+        <Stat
+          label="Games"
+          value={pts?.games != null ? num(pts.games) : "–"}
+          hint={pts ? (pts.games != null ? "estimate from serves" : "not countable yet: serves missed") : undefined}
+        />
       </Card>
 
       {run.quality.length > 0 && (

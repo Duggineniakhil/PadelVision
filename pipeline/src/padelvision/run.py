@@ -19,6 +19,7 @@ runs/<name>/
   events.parquet           stage 5  hits / handling / floor bounces (with court position) / turns
   rallies.json             stage 5  rallies (segments with an exchange) + other ball activity
                                     + rally stats (counts, placement, shot speed estimate)
+                                    + points (stage 5b: serves, points, games estimate)
   placement.png            stage 7  where each team's shots landed
 """
 
@@ -228,10 +229,12 @@ def _ball_stages(dets: pd.DataFrame, fps: float, n_frames: int, out: Path) -> di
 
 def events(run_dir: str | Path) -> dict:
     """Stage 5: events + rallies from ball.parquet and players.parquet (no video or GPU)."""
+    from padelvision.analytics.points import points_summary
     from padelvision.events import activity_segments, detect_events
 
     out = Path(run_dir)
-    fps = json.loads((out / "video.json").read_text())["fps"]
+    info = json.loads((out / "video.json").read_text())
+    fps = info["fps"]
     ball = pd.read_parquet(out / "ball.parquet")
     players = pd.read_parquet(out / "players.parquet")
     cal = CourtCalibration.load(out / "court.json")
@@ -258,6 +261,11 @@ def events(run_dir: str | Path) -> dict:
         "other_activity": [s for s in segments if not s["exchange"]],
         "stats": rally_stats(ev, rallies, players, fps, cal, ball),
     }
+    stats_path = out / "stats.json"
+    persons = json.loads(stats_path.read_text()).get("persons", {}) if stats_path.exists() else {}
+    summary["points"] = points_summary(
+        ev, players, fps, int(info["frame_count"]) - 1, persons.get("changeovers", [])
+    )
     (out / "rallies.json").write_text(json.dumps(summary, indent=2))
     save_placement_map(summary["stats"], out / "placement.png")
     speed = summary["stats"].get("shot_speed_estimate", {})
@@ -268,5 +276,11 @@ def events(run_dir: str | Path) -> dict:
         f"[6] rally stats + placement.png; shot speed estimate: "
         f"{speed.get('median_kmh', speed.get('insufficient_data'))} "
         f"(median km/h, {speed.get('samples', 0)} shots)"
+    )
+    pc, games = summary["points"]["counts"], summary["points"]["games_estimate"]
+    print(
+        f"[5b] serves {pc['serves']} ({pc['confirmed']} confirmed), points {pc['points']} "
+        f"({pc['second_serves']} with a second serve); games "
+        + (str(len(games["games"])) if games["consistent"] else "not countable (rules checks fail)")
     )
     return summary

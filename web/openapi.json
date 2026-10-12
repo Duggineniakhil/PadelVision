@@ -1983,6 +1983,55 @@
     ],
     "title": "PlayerTrack"
    },
+   "PointsSummary": {
+    "properties": {
+     "serves": {
+      "type": "integer",
+      "title": "Serves"
+     },
+     "confirmed_serves": {
+      "type": "integer",
+      "title": "Confirmed Serves"
+     },
+     "faults_suspected": {
+      "type": "integer",
+      "title": "Faults Suspected"
+     },
+     "points": {
+      "type": "integer",
+      "title": "Points"
+     },
+     "second_serves": {
+      "type": "integer",
+      "title": "Second Serves"
+     },
+     "games": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Games"
+     },
+     "games_note": {
+      "type": "string",
+      "title": "Games Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "serves",
+     "confirmed_serves",
+     "faults_suspected",
+     "points",
+     "second_serves",
+     "games_note"
+    ],
+    "title": "PointsSummary"
+   },
    "QualityNote": {
     "properties": {
      "level": {
@@ -2363,6 +2412,16 @@
       "anyOf": [
        {
         "$ref": "#/components/schemas/SpeedSummary"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "points_summary": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PointsSummary"
        },
        {
         "type": "null"

@@ -64,6 +64,15 @@ retraining the ball detector with this court; tracker rules can't recover undete
   hit next, ball tracked >= 90% of the frames in between, no bounce) or "not_seen"; cards draw volleys hollow. Rally stats live there, not in stats.json (`restats` rewrites that).
   `render` draws hits, bounces and a rally banner. Test_video: 4 rallies, 18 rally hits (visual review: 17 real,
   1 unclear); 5 shots with a trustworthy speed, 33-56 km/h, each about +-20% (an 80 km/h one was a track join).
+- Serves, points, games (stage 5b, `analytics/points.py`, rallies.json `points`): a serve = a hit from behind the
+  service line (feet |y| >= 6.45 m) after >= 4 s without a hit; "confirmed" when its first bounce is seen in the
+  diagonal service box, `fault_suspected` when seen outside. Every serve starts a point; the same server again
+  within 25 s with nothing played between = a second serve (same point). Games = runs of the same serving PAIR
+  (partners are less certain than sides), cut at changeovers; checked against padel's rules (2 games between
+  changeovers, serving pair alternates) and only shown when the checks pass. Checked by eye: Test_video serves at
+  32.7, 137.3, 196.5 s are real; 9.0 s probably not. GX010012: 37 serves (14 confirmed), 32 points; games not
+  countable (far serves mostly missed by the ball detector; returns after a missed serve look like serves; the ball
+  before a hit can't tell them apart yet because the tracker may follow a spare ball). Who won a point: not attempted.
 - Videos: `render` (preview) and `highlights` (`highlights.py`: rallies ranked by hits + length + fastest
   measured shot, cut and joined, title card per clip, ball trail, and after each clip a 3 s summary card from
   `visuals.rally_card`: per-player heatmaps of that rally + shot map = hitter's feet -> landing bounce, the
@@ -95,7 +104,8 @@ Don't invent commands for tooling that hasn't been set up; add them here once th
 Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, line snapping, drawing),
 `models/` (manifest registry, `person_tracker.py`, the only ultralytics import), `players/`
 (stage 2 detection, stage 3 on-court filtering + identities, stage 3b changeovers -> persons), `ball/` (bootstrap, labelling, evaluation,
-dataset, stage 4 tracking), `events.py` (stage 5), `analytics/movement.py` + `analytics/rallies.py` (stage 6),
+dataset, stage 4 tracking), `events.py` (stage 5), `analytics/points.py` (stage 5b: serves, points, games),
+`analytics/movement.py` + `analytics/rallies.py` (stage 6),
 `visuals.py` (heatmaps, placement map), `render.py` (preview video), `events_review.py` /
 `events_label_tool.py` / `events_eval.py` (hit/bounce labelling + scoring), `run.py` (stage orchestration).
 The tuning constants (smoothing windows, speed caps, zones, margins) sit at the top of each module.

@@ -80,6 +80,16 @@ def detail(run: Path) -> S.RunDetail:
     changeovers = [S.Changeover(t=c["t"], evidence=c["evidence"])
                    for c in persons.get("changeovers", [])]  # fmt: skip
     unresolved = len(persons.get("unresolved_gatherings", []))
+    colours = bool(persons.get("colours"))
+    points = None
+    if rallies is not None and rallies.get("points"):
+        pc, est = rallies["points"]["counts"], rallies["points"]["games_estimate"]
+        points = S.PointsSummary(
+            serves=pc["serves"], confirmed_serves=pc["confirmed"],
+            faults_suspected=pc["faults_suspected"], points=pc["points"],
+            second_serves=pc["second_serves"],
+            games=len(est["games"]) if est["consistent"] else None, games_note=est["note"],
+        )  # fmt: skip
     sp = rs.get("shot_speed_estimate")
     speed = None
     if sp is not None:
@@ -95,8 +105,10 @@ def detail(run: Path) -> S.RunDetail:
         media=sorted(n for n in MEDIA_FILES if (run / n).exists()),
         court=court, ball_coverage=coverage, players=players,
         teams=_teams(stats), rally_summary=rally_summary, speed_summary=speed,
+        points_summary=points,
         changeovers=changeovers, unresolved_gatherings=unresolved,
-        quality=_quality(court, coverage, players, rally_summary, speed, changeovers, unresolved),
+        quality=_quality(court, coverage, players, rally_summary, speed, changeovers, unresolved,
+                         colours),
     )  # fmt: skip
 
 
@@ -144,7 +156,7 @@ def _clock(t: float) -> str:
 
 
 def _quality(
-    court, coverage, players, rally_summary, speed, changeovers=(), unresolved=0
+    court, coverage, players, rally_summary, speed, changeovers=(), unresolved=0, colours=False
 ) -> list[S.QualityNote]:
     notes = []
     if changeovers:
@@ -152,8 +164,9 @@ def _quality(
                          for c in changeovers)  # fmt: skip
         notes.append(S.QualityNote(
             level="info", title=f"The teams changed ends {len(changeovers)} times",
-            detail=f"At {when}. Players are followed across changeovers by the side of the court "
-                   "each one plays (forehand or backhand side), not by their appearance. Team A "
+            detail=f"At {when}. Players are followed across changeovers "
+                   + ("by clothing colours, and where those don't decide, " if colours else "")
+                   + "by the side of the court each one plays (forehand or backhand side). Team A "
                    "started on the near side.",
         ))  # fmt: skip
     if unresolved:
@@ -161,7 +174,8 @@ def _quality(
             level="info", title=f"{unresolved} breaks at the net could not be checked",
             detail="All players met at the net and the tracking lost them, so it can't be told "
                    "whether the teams changed ends there. They are assumed to have kept their "
-                   "ends.",
+                   "ends." + ("" if colours else " Running the highlights notebook again adds the "
+                   "players' clothing colours, which can decide this."),
         ))  # fmt: skip
     if coverage is not None and coverage < BALL_COVERAGE_WARN:
         notes.append(S.QualityNote(

@@ -669,6 +669,23 @@ export interface components {
             /** Y */
             y: number[];
         };
+        /** PointsSummary */
+        PointsSummary: {
+            /** Serves */
+            serves: number;
+            /** Confirmed Serves */
+            confirmed_serves: number;
+            /** Faults Suspected */
+            faults_suspected: number;
+            /** Points */
+            points: number;
+            /** Second Serves */
+            second_serves: number;
+            /** Games */
+            games?: number | null;
+            /** Games Note */
+            games_note: string;
+        };
         /** QualityNote */
         QualityNote: {
             /**
@@ -788,6 +805,7 @@ export interface components {
             teams: components["schemas"]["TeamStats"][];
             rally_summary?: components["schemas"]["RallySummary"] | null;
             speed_summary?: components["schemas"]["SpeedSummary"] | null;
+            points_summary?: components["schemas"]["PointsSummary"] | null;
             /**
              * Changeovers
              * @default []

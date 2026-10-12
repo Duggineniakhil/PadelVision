@@ -146,7 +146,8 @@ def _cmd_events(args: argparse.Namespace) -> int:
 def _cmd_event_review_pack(args: argparse.Namespace) -> int:
     from padelvision.events_review import make_event_pack
 
-    make_event_pack(args.video, args.run, args.out, args.n_random, args.max_seconds)
+    make_event_pack(args.video, args.run, args.out, args.n_random, args.max_seconds,
+                    turn_share=args.turn_share)  # fmt: skip
     return 0
 
 
@@ -313,6 +314,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", required=True)
     p.add_argument("--n-random", type=int, default=3, help="random windows outside activity")
     p.add_argument("--max-seconds", type=float, default=120.0, help="total labelling time")
+    p.add_argument("--turn-share", type=float, default=None,
+                   help="long matches: share of the time for unclassified turns (e.g. 0.4); "
+                   "windows are then sampled over the whole match")  # fmt: skip
     p.set_defaults(func=_cmd_event_review_pack)
 
     p = sub.add_parser("label-events", help="label hits/bounces in an event pack (local, GUI)")

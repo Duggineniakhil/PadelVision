@@ -4,10 +4,12 @@
     padelvision label-events data/event_review                                  (local GUI)
 
 Windows: every rally and every other-activity segment with a hit (from rallies.json, padded
-by PAD_S), plus `n_random` random windows elsewhere so that play the detector missed entirely
-gets labelled too. Every hit and floor bounce inside a finished window is marked; a frame
-without a mark means "no event", which makes recall measurable. The total length is capped at
-`max_total_s` (rallies first, then random windows, then other activity).
+by PAD_S), windows of +-TURN_PAD_S around unclassified turns of the ball (events.parquet kind
+"turn": the doubtful cases, often missed hits, and where wall bounces would show up), plus
+`n_random` random windows elsewhere so that play the detector missed entirely gets labelled
+too. Every hit and floor bounce inside a finished window is marked; a frame without a mark
+means "no event", which makes recall measurable. The total length is capped at
+`max_total_s` (rallies first, then turns, then random windows, then other activity).
 
 The pack holds frames/<frame>.jpg, a copy of the run's stage outputs (run/) for overlays and
 scoring, and pack.json with the windows.
@@ -25,13 +27,14 @@ import numpy as np
 from padelvision.ball.candidates import read_frames
 
 PAD_S = 1.0
+TURN_PAD_S = 1.5
 N_RANDOM = 3
 RANDOM_S = 6.0
 MAX_TOTAL_S = 120.0
 JPEG_QUALITY = 88
 RUN_FILES = ["video.json", "court.json", "players.parquet", "ball.parquet", "events.parquet",
              "rallies.json"]  # fmt: skip
-PRIORITY = {"rally": 0, "random": 1, "other": 2}
+PRIORITY = {"rally": 0, "turn": 1, "random": 2, "other": 3}
 
 
 def choose_windows(
@@ -41,11 +44,22 @@ def choose_windows(
     n_random: int = N_RANDOM,
     max_total_s: float = MAX_TOTAL_S,
     seed: int = 0,
+    turns: list[int] | None = None,
+    turn_share: float | None = None,
 ) -> list[dict]:
-    """rallies.json summary -> [{id, start, end, source}] (inclusive frames, sorted by time)."""
+    """rallies.json summary (+ frames of unclassified turns) -> [{id, start, end, source}]
+    (inclusive frames, sorted by time).
+
+    By default windows are taken by priority until `max_total_s`. With `turn_share` (long
+    matches, where the rallies alone fill any budget): the random windows first, then up to
+    that share of the rest for turn windows, then rallies, then other activity, each source
+    sampled at random (seeded) so the windows spread over the whole match."""
     pad = round(PAD_S * fps)
     found = [(s, "rally") for s in summary.get("rallies", [])]
     found += [(s, "other") for s in summary.get("other_activity", []) if s.get("hits", 0) > 0]
+    tpad = round(TURN_PAD_S * fps)
+    found += [({"start_frame": f - tpad + pad, "end_frame": f + tpad - pad}, "turn")
+              for f in (turns or [])]  # fmt: skip
     wins = _merge([
         [max(0, s["start_frame"] - pad), min(n_frames - 1, s["end_frame"] + pad), src]
         for s, src in found
@@ -64,11 +78,28 @@ def choose_windows(
 
     chosen: list[list] = []
     total = 0.0
-    for w in sorted(wins + randoms, key=lambda w: (PRIORITY[w[2]], w[0])):
-        dur = (w[1] - w[0] + 1) / fps
-        if total + dur <= max_total_s:
-            chosen.append(w)
-            total += dur
+
+    def take(cands: list[list], budget: float) -> None:
+        nonlocal total
+        for w in cands:
+            dur = (w[1] - w[0] + 1) / fps
+            if total + dur <= budget:
+                chosen.append(w)
+                total += dur
+
+    if turn_share is None:
+        take(sorted(wins + randoms, key=lambda w: (PRIORITY[w[2]], w[0])), max_total_s)
+    else:
+
+        def shuffled(src: str) -> list[list]:
+            ws = [w for w in wins if w[2] == src]
+            return [ws[i] for i in rng.permutation(len(ws))]
+
+        take(randoms, max_total_s)
+        take(shuffled("turn"), total + turn_share * (max_total_s - total))
+        take(shuffled("rally"), max_total_s)
+        take(shuffled("turn") + shuffled("other"), max_total_s)
+        chosen = list({tuple(w): w for w in chosen}.values())
     chosen.sort()
     return [
         {"id": i + 1, "start": s, "end": e, "source": src} for i, (s, e, src) in enumerate(chosen)
@@ -82,12 +113,19 @@ def make_event_pack(
     n_random: int = N_RANDOM,
     max_total_s: float = MAX_TOTAL_S,
     seed: int = 0,
+    turn_share: float | None = None,
 ) -> Path:
     run, out = Path(run_dir), Path(out_dir)
     info = json.loads((run / "video.json").read_text())
     fps, n_frames = float(info["fps"]), int(info["frame_count"])
     summary = json.loads((run / "rallies.json").read_text())
-    windows = choose_windows(summary, n_frames, fps, n_random, max_total_s, seed)
+    turns = []
+    if (run / "events.parquet").exists():
+        import pandas as pd
+
+        ev = pd.read_parquet(run / "events.parquet")
+        turns = [int(f) for f in ev.frame[ev.kind == "turn"]]
+    windows = choose_windows(summary, n_frames, fps, n_random, max_total_s, seed, turns, turn_share)
     wanted = {f for w in windows for f in range(w["start"], w["end"] + 1)}
 
     (out / "frames").mkdir(parents=True, exist_ok=True)

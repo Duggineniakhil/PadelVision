@@ -175,6 +175,8 @@ padelvision ball-bootstrap <video> --run runs/match1          # classical candid
 padelvision ball-review-pack <video> --run runs/match1 --out ball_review
 padelvision ball-track <video> --run runs/match1               # stage 4: ball in play (ml/notebooks/05)
 padelvision event-review-pack <video> --run runs/match1 --out event_review   # frames to label hits/bounces in
+#   long matches: --max-seconds 150 --turn-share 0.4 (rallies sampled over the match + windows around unclassified
+#   turns + random); notebook 07 section 4 (MAKE_EVENT_PACK = True) builds it as event_review.zip
 # Local: label the downloaded review pack (Y = ring on ball, click = ball, N = none, M = motion view)
 .venv/Scripts/padelvision label-ball data/ball_review
 # Local again: redo stages 3-7 from a downloaded Kaggle run folder (no video/GPU needed)

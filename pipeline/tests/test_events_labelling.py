@@ -109,3 +109,33 @@ def test_score_events_matches_within_tolerance_inside_windows():
     assert (bounce["tp"], bounce["fp"], bounce["fn"]) == (1, 0, 0) and bounce["f1"] == 1.0
     assert bounce["median_px_error"] == 5.0
     assert res["labelled_s"] == round(100 / FPS, 1)
+
+
+def test_turn_windows_come_after_rallies_and_before_random():
+    summary = {"rallies": [{"start_frame": 100, "end_frame": 200}], "other_activity": []}
+    wins = choose_windows(summary, 3000, FPS, n_random=1, turns=[150, 1000, 2000])
+    sources = {w["source"] for w in wins}
+    assert sources == {"rally", "turn", "random"}
+    turn = [w for w in wins if w["source"] == "turn"]
+    assert len(turn) == 2  # the turn at 150 is inside the rally window
+    assert all(w["start"] <= 1000 <= w["end"] or w["start"] <= 2000 <= w["end"] for w in turn)
+    # capped: rallies first, then turns, random last
+    capped = choose_windows(summary, 3000, FPS, n_random=1, turns=[1000],
+                            max_total_s=(200 - 100 + 1) / FPS + 2 * 1.0 + 3.0 + 0.5)  # fmt: skip
+    assert [w["source"] for w in capped] == ["rally", "turn"]
+
+
+def test_turn_share_splits_the_budget_and_spreads_rallies():
+    rallies = [_seg(s, s + 150) for s in range(0, 30000, 1000)]  # 30 rallies of 5 s
+    summary = {"rallies": rallies, "other_activity": []}
+    turns = list(range(500, 30000, 1000))  # between the rallies
+    wins = choose_windows(
+        summary, 30000, FPS, n_random=2, max_total_s=60.0, turns=turns, turn_share=0.4
+    )
+    secs = {k: sum((w["end"] - w["start"] + 1) / FPS for w in wins if w["source"] == k)
+            for k in ("rally", "turn", "random")}  # fmt: skip
+    assert secs["random"] == 12.0  # random windows first
+    assert 12.0 <= secs["turn"] <= 0.4 * 48 + 0.1  # up to 40 % of the rest
+    assert secs["rally"] > 0 and sum(secs.values()) <= 60.0
+    starts = [w["start"] for w in wins if w["source"] == "rally"]
+    assert max(starts) - min(starts) > 10000  # sampled over the match, not the first few

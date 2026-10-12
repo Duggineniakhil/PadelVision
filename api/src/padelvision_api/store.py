@@ -68,7 +68,14 @@ def write_meta(run: Path, **changes) -> dict:
     meta.update(changes)
     tmp = run / "meta.json.tmp"
     tmp.write_text(json.dumps(meta, indent=2))
-    tmp.replace(run / "meta.json")
+    for attempt in range(20):  # Windows refuses to replace a file another thread is reading
+        try:
+            tmp.replace(run / "meta.json")
+            break
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.05)
     return meta
 
 

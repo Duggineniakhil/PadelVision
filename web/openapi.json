@@ -678,6 +678,336 @@
      }
     }
    }
+  },
+  "/api/calibration/images": {
+   "post": {
+    "summary": "Upload Calibration Image",
+    "description": "An image to calibrate on: a frame / background.png, or notebook 08's calibration.zip.",
+    "operationId": "upload_calibration_image_api_calibration_images_post",
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_upload_calibration_image_api_calibration_images_post"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CalibrationImage"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/calibration/images/{image_id}": {
+   "get": {
+    "summary": "Get Calibration Image",
+    "operationId": "get_calibration_image_api_calibration_images__image_id__get",
+    "parameters": [
+     {
+      "name": "image_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Image Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/calibration/snap": {
+   "post": {
+    "summary": "Snap",
+    "description": "Snap roughly clicked points onto the painted line (or edge) they lie along.",
+    "operationId": "snap_api_calibration_snap_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SnapRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SnapResult"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/calibration/fit": {
+   "post": {
+    "summary": "Fit",
+    "operationId": "fit_api_calibration_fit_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CalibrationInput"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CalibrationFit"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/court": {
+   "get": {
+    "summary": "Get Run Court",
+    "operationId": "get_run_court_api_runs__run_id__court_get",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunCourt"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "summary": "Save Run Court",
+    "description": "Save a new calibration and recompute the analysis that depends on it.",
+    "operationId": "save_run_court_api_runs__run_id__court_put",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CalibrationInput"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunListItem"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/court/background": {
+   "post": {
+    "summary": "Run Background",
+    "description": "The court without players: median of frames from the attached video (takes a while).",
+    "operationId": "run_background_api_runs__run_id__court_background_post",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     },
+     {
+      "name": "refresh",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Refresh"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CalibrationImage"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/runs/{run_id}/court/restore": {
+   "post": {
+    "summary": "Restore Run Court",
+    "description": "Swap back to the calibration used before the last save.",
+    "operationId": "restore_run_court_api_runs__run_id__court_restore_post",
+    "parameters": [
+     {
+      "name": "run_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Run Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RunListItem"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "components": {
@@ -740,6 +1070,23 @@
     ],
     "title": "Body_import_run_api_runs_post"
    },
+   "Body_upload_calibration_image_api_calibration_images_post": {
+    "properties": {
+     "files": {
+      "items": {
+       "type": "string",
+       "contentMediaType": "application/octet-stream"
+      },
+      "type": "array",
+      "title": "Files"
+     }
+    },
+    "type": "object",
+    "required": [
+     "files"
+    ],
+    "title": "Body_upload_calibration_image_api_calibration_images_post"
+   },
    "Body_upload_video_api_runs__run_id__video_post": {
     "properties": {
      "file": {
@@ -786,6 +1133,239 @@
      "zone"
     ],
     "title": "Bounce"
+   },
+   "CalibrationAccuracy": {
+    "properties": {
+     "rms_px": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rms Px"
+     },
+     "constraints_px": {
+      "additionalProperties": {
+       "type": "number"
+      },
+      "type": "object",
+      "title": "Constraints Px"
+     },
+     "zones": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/ZoneAccuracy"
+      },
+      "type": "object",
+      "title": "Zones"
+     }
+    },
+    "type": "object",
+    "required": [
+     "constraints_px",
+     "zones"
+    ],
+    "title": "CalibrationAccuracy"
+   },
+   "CalibrationFit": {
+    "properties": {
+     "accuracy": {
+      "$ref": "#/components/schemas/CalibrationAccuracy"
+     },
+     "court_lines": {
+      "items": {
+       "items": {
+        "prefixItems": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "number"
+         }
+        ],
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Court Lines"
+     },
+     "keypoints": {
+      "additionalProperties": {
+       "prefixItems": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "number"
+        }
+       ],
+       "type": "array",
+       "maxItems": 2,
+       "minItems": 2
+      },
+      "type": "object",
+      "title": "Keypoints"
+     },
+     "lens": {
+      "$ref": "#/components/schemas/Lens"
+     },
+     "line_rms_px": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Line Rms Px"
+     },
+     "court_json": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Court Json"
+     }
+    },
+    "type": "object",
+    "required": [
+     "accuracy",
+     "court_lines",
+     "keypoints",
+     "lens",
+     "court_json"
+    ],
+    "title": "CalibrationFit"
+   },
+   "CalibrationImage": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "width": {
+      "type": "integer",
+      "title": "Width"
+     },
+     "height": {
+      "type": "integer",
+      "title": "Height"
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "upload",
+       "video"
+      ],
+      "title": "Source"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "width",
+     "height",
+     "source"
+    ],
+    "title": "CalibrationImage"
+   },
+   "CalibrationInput": {
+    "properties": {
+     "image_size": {
+      "prefixItems": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "integer"
+       }
+      ],
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Image Size"
+     },
+     "image_points": {
+      "additionalProperties": {
+       "prefixItems": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "number"
+        }
+       ],
+       "type": "array",
+       "maxItems": 2,
+       "minItems": 2
+      },
+      "type": "object",
+      "title": "Image Points",
+      "default": {}
+     },
+     "named_lines": {
+      "additionalProperties": {
+       "items": {
+        "prefixItems": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "number"
+         }
+        ],
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       "type": "array"
+      },
+      "type": "object",
+      "title": "Named Lines",
+      "default": {}
+     },
+     "lines": {
+      "items": {
+       "items": {
+        "prefixItems": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "number"
+         }
+        ],
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Lines",
+      "default": []
+     },
+     "lens": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Lens"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "image_size"
+    ],
+    "title": "CalibrationInput",
+    "description": "Clicked constraints (raw image pixels). `lens` given = keep that lens, else it is fitted\nfrom the lines with >= 3 points (identity if fewer than 2 such lines)."
    },
    "Clip": {
     "properties": {
@@ -1077,6 +1657,39 @@
      "clips"
     ],
     "title": "HighlightsVideo"
+   },
+   "Lens": {
+    "properties": {
+     "k1": {
+      "type": "number",
+      "title": "K1"
+     },
+     "k2": {
+      "type": "number",
+      "title": "K2"
+     },
+     "f": {
+      "type": "number",
+      "title": "F"
+     },
+     "cx": {
+      "type": "number",
+      "title": "Cx"
+     },
+     "cy": {
+      "type": "number",
+      "title": "Cy"
+     }
+    },
+    "type": "object",
+    "required": [
+     "k1",
+     "k2",
+     "f",
+     "cx",
+     "cy"
+    ],
+    "title": "Lens"
    },
    "OverlayResponse": {
     "properties": {
@@ -1555,6 +2168,64 @@
     ],
     "title": "RenameRun"
    },
+   "RunCourt": {
+    "properties": {
+     "calibration": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CalibrationInput"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "accuracy": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/CalibrationAccuracy"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "video_size": {
+      "prefixItems": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "integer"
+       }
+      ],
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Video Size"
+     },
+     "has_video": {
+      "type": "boolean",
+      "title": "Has Video"
+     },
+     "can_recompute": {
+      "type": "boolean",
+      "title": "Can Recompute"
+     },
+     "has_previous": {
+      "type": "boolean",
+      "title": "Has Previous"
+     }
+    },
+    "type": "object",
+    "required": [
+     "video_size",
+     "has_video",
+     "can_recompute",
+     "has_previous"
+    ],
+    "title": "RunCourt"
+   },
    "RunDetail": {
     "properties": {
      "id": {
@@ -1915,6 +2586,72 @@
      "team"
     ],
     "title": "Shot"
+   },
+   "SnapRequest": {
+    "properties": {
+     "image_id": {
+      "type": "string",
+      "title": "Image Id"
+     },
+     "guide": {
+      "items": {
+       "prefixItems": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "number"
+        }
+       ],
+       "type": "array",
+       "maxItems": 2,
+       "minItems": 2
+      },
+      "type": "array",
+      "title": "Guide"
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "paint",
+       "edge"
+      ],
+      "title": "Mode",
+      "default": "paint"
+     }
+    },
+    "type": "object",
+    "required": [
+     "image_id",
+     "guide"
+    ],
+    "title": "SnapRequest"
+   },
+   "SnapResult": {
+    "properties": {
+     "points": {
+      "items": {
+       "prefixItems": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "number"
+        }
+       ],
+       "type": "array",
+       "maxItems": 2,
+       "minItems": 2
+      },
+      "type": "array",
+      "title": "Points"
+     }
+    },
+    "type": "object",
+    "required": [
+     "points"
+    ],
+    "title": "SnapResult"
    },
    "SpeedSummary": {
     "properties": {

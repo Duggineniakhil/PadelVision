@@ -15,6 +15,12 @@ export type HighlightsResponse = Schemas["HighlightsResponse"];
 export type HighlightsVideo = Schemas["HighlightsVideo"];
 export type QualityNote = Schemas["QualityNote"];
 export type CourtInfo = Schemas["CourtInfo"];
+export type CalibrationInput = Schemas["CalibrationInput"];
+export type CalibrationFit = Schemas["CalibrationFit"];
+export type CalibrationImage = Schemas["CalibrationImage"];
+export type CalibrationAccuracy = Schemas["CalibrationAccuracy"];
+export type Lens = Schemas["Lens"];
+export type RunCourt = Schemas["RunCourt"];
 export type Team = PlayerStats["team"];
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -165,5 +171,46 @@ export async function uploadVideo(id: string, file: File, onProgress?: (f: numbe
   const form = new FormData();
   form.append("file", file);
   await upload<RunDetail>(`/api/runs/${id}/video`, form, onProgress);
+  refreshRun(id);
+}
+
+// --- court calibration -----------------------------------------------------------------------
+export const calibrationImageUrl = (imageId: string) => `${API_URL}/api/calibration/images/${imageId}`;
+
+const json = (method: string, body: unknown): RequestInit => ({
+  method,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
+
+export function uploadCalibrationImage(file: File) {
+  const form = new FormData();
+  form.append("files", file);
+  return upload<CalibrationImage>("/api/calibration/images", form);
+}
+
+export const snapLine = (imageId: string, guide: [number, number][], mode: "paint" | "edge") =>
+  request<Schemas["SnapResult"]>("/api/calibration/snap", json("POST", { image_id: imageId, guide, mode }));
+
+export const fitCalibration = (body: CalibrationInput) =>
+  request<CalibrationFit>("/api/calibration/fit", json("POST", body));
+
+export function useRunCourt(id: string, ready: boolean) {
+  return useSWR<RunCourt>(ready ? `/api/runs/${id}/court` : null, fetcher, { revalidateOnFocus: false });
+}
+
+/** The court without players, from the attached video (cached on the server after the first time). */
+export const runCourtBackground = (id: string, refresh = false) =>
+  request<CalibrationImage>(`/api/runs/${id}/court/background${refresh ? "?refresh=true" : ""}`, {
+    method: "POST",
+  });
+
+export async function saveRunCourt(id: string, body: CalibrationInput) {
+  await request<RunListItem>(`/api/runs/${id}/court`, json("PUT", body));
+  refreshRun(id);
+}
+
+export async function restoreRunCourt(id: string) {
+  await request<RunListItem>(`/api/runs/${id}/court/restore`, { method: "POST" });
   refreshRun(id);
 }

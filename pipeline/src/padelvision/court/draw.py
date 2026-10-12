@@ -12,19 +12,18 @@ TEAM_COLORS = {"near": (80, 200, 80), "far": (60, 140, 255)}  # BGR
 ROUNDTRIP_TOL_M = 0.25
 
 
-def draw_court_overlay(
-    frame: np.ndarray, cal: CourtCalibration, color=(0, 255, 255), thickness: int = 2
-) -> np.ndarray:
-    """Project the court lines into the image (curved where the lens distorts)."""
-    out = frame.copy()
-    h, w = frame.shape[:2]
+def court_polylines(cal: CourtCalibration, image_size: tuple[int, int] | None = None,
+                    samples: int = 120) -> list[np.ndarray]:  # fmt: skip
+    """The court lines projected into the image (curved where the lens distorts), as (N, 2)
+    pixel polylines. Only parts that project sensibly are kept: not behind the camera, inside
+    the lens model's valid range, and mapping back to the same court point (out-of-view parts
+    of strongly distorted lenses can land at bogus image positions)."""
+    w, h = image_size or cal.image_size
+    out = []
     for (x0, y0), (x1, y1) in COURT_LINES:
-        t = np.linspace(0, 1, 120)[:, None]
+        t = np.linspace(0, 1, samples)[:, None]
         court = np.c_[x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]
         pts = cal.to_image(court)
-        # Draw only parts that project sensibly: not behind the camera, inside the lens model's
-        # valid range, and mapping back to the same court point (out-of-view parts of strongly
-        # distorted lenses can land at bogus image positions).
         ok = np.isfinite(pts).all(axis=1) & (np.abs(pts - [w / 2, h / 2]) < [w, h]).all(axis=1)
         if ok.any():
             back = np.full_like(court, np.nan)
@@ -32,8 +31,18 @@ def draw_court_overlay(
             ok &= np.linalg.norm(back - court, axis=1) < ROUNDTRIP_TOL_M
         for run in np.split(np.arange(len(pts)), np.nonzero(np.diff(ok.astype(int)))[0] + 1):
             if ok[run[0]] and len(run) > 1:
-                seg = pts[run].round().astype(np.int32)
-                cv2.polylines(out, [seg], False, color, thickness, cv2.LINE_AA)
+                out.append(pts[run])
+    return out
+
+
+def draw_court_overlay(
+    frame: np.ndarray, cal: CourtCalibration, color=(0, 255, 255), thickness: int = 2
+) -> np.ndarray:
+    """Project the court lines into the image (curved where the lens distorts)."""
+    out = frame.copy()
+    h, w = frame.shape[:2]
+    for seg in court_polylines(cal, (w, h)):
+        cv2.polylines(out, [seg.round().astype(np.int32)], False, color, thickness, cv2.LINE_AA)
     for name, (px, py) in cal.image_points.items():
         cv2.circle(out, (round(px), round(py)), 5, (0, 0, 255), -1, cv2.LINE_AA)
         proj = cal.to_image(np.array([COURT_KEYPOINTS[name]]))[0]

@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+import zipfile
 from pathlib import Path
 from typing import Annotated
 
@@ -16,8 +17,8 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
+from padelvision_api import calibration, store, views
 from padelvision_api import schemas as S
-from padelvision_api import store, views
 
 app = FastAPI(title="PadelVision API", version="0.1.0")
 app.add_middleware(
@@ -181,6 +182,86 @@ def get_overlay(run_id: str, start: int = Query(..., ge=0), end: int = Query(...
 @app.get("/api/runs/{run_id}/highlights", response_model=S.HighlightsResponse)
 def get_highlights(run_id: str) -> S.HighlightsResponse:
     return views.highlights(_run(run_id))
+
+
+# --- court calibration -----------------------------------------------------------------------
+def _cal_error(e: Exception) -> HTTPException:
+    return HTTPException(422, str(e))
+
+
+@app.post("/api/calibration/images", response_model=S.CalibrationImage, status_code=201)
+def upload_calibration_image(files: Annotated[list[UploadFile], File()]) -> S.CalibrationImage:
+    """An image to calibrate on: a frame / background.png, or notebook 08's calibration.zip."""
+    tmp = Path(tempfile.mkdtemp(prefix="pv-upload-"))
+    try:
+        return calibration.save_image(_save_uploads(files, tmp))
+    except (calibration.CalibrationError, zipfile.BadZipFile) as e:
+        raise _cal_error(e) from e
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+@app.get("/api/calibration/images/{image_id}")
+def get_calibration_image(image_id: str) -> FileResponse:
+    try:
+        return FileResponse(calibration.image_path(image_id))
+    except calibration.CalibrationError as e:
+        raise HTTPException(404, str(e)) from e
+
+
+@app.post("/api/calibration/snap", response_model=S.SnapResult)
+def snap(body: S.SnapRequest) -> S.SnapResult:
+    """Snap roughly clicked points onto the painted line (or edge) they lie along."""
+    try:
+        return S.SnapResult(points=calibration.snap(body))
+    except (calibration.CalibrationError, ValueError) as e:
+        raise _cal_error(e) from e
+
+
+@app.post("/api/calibration/fit", response_model=S.CalibrationFit)
+def fit(body: S.CalibrationInput) -> S.CalibrationFit:
+    try:
+        return calibration.fit(body)
+    except calibration.CalibrationError as e:
+        raise _cal_error(e) from e
+
+
+@app.get("/api/runs/{run_id}/court", response_model=S.RunCourt)
+def get_run_court(run_id: str) -> S.RunCourt:
+    _run(run_id)
+    return calibration.run_court(run_id)
+
+
+@app.post("/api/runs/{run_id}/court/background", response_model=S.CalibrationImage)
+def run_background(run_id: str, refresh: bool = False) -> S.CalibrationImage:
+    """The court without players: median of frames from the attached video (takes a while)."""
+    _run(run_id)
+    try:
+        return calibration.run_background(run_id, refresh)
+    except (calibration.CalibrationError, ValueError) as e:
+        raise _cal_error(e) from e
+
+
+@app.put("/api/runs/{run_id}/court", response_model=S.RunListItem)
+def save_run_court(run_id: str, body: S.CalibrationInput) -> S.RunListItem:
+    """Save a new calibration and recompute the analysis that depends on it."""
+    run = _run(run_id)
+    try:
+        calibration.save_run_court(run_id, body)
+    except calibration.CalibrationError as e:
+        raise _cal_error(e) from e
+    return views.list_item(run)
+
+
+@app.post("/api/runs/{run_id}/court/restore", response_model=S.RunListItem)
+def restore_run_court(run_id: str) -> S.RunListItem:
+    """Swap back to the calibration used before the last save."""
+    run = _run(run_id)
+    try:
+        calibration.restore_previous(run_id)
+    except calibration.CalibrationError as e:
+        raise _cal_error(e) from e
+    return views.list_item(run)
 
 
 def serve() -> None:

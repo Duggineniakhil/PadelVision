@@ -14,11 +14,12 @@ npm run gen:api      # regenerate src/lib/api-types.ts after: python ../scripts/
 Structure:
 
 ```
-src/app/                    routes: / (matches), /matches/[id]/{,video,players,rallies,shots,highlights}
+src/app/                    routes: / (matches), /calibrate, /matches/[id]/{,video,players,rallies,shots,highlights,court}
 src/components/ui.tsx       buttons, cards, stats, callouts, dialog
 src/components/shell.tsx    header, import dialog, command palette (Ctrl+K)
 src/components/court.tsx    court diagrams (SVG, metres): heatmaps, shot maps, landing points
 src/components/timeline.tsx match timeline of rallies
+src/components/calibration.tsx  court calibration editor (click + snap court lines, live fit and accuracy)
 src/lib/api.ts              typed API client + SWR hooks (types generated from the API's OpenAPI schema)
 ```
 

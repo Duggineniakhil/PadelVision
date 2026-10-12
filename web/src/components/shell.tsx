@@ -54,6 +54,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Suspense fallback={<span className="px-2.5 py-1.5 font-medium text-zinc-900">Matches</span>}>
               <HeaderLink href="/">Matches</HeaderLink>
             </Suspense>
+            <Suspense fallback={<span className="px-2.5 py-1.5 font-medium text-zinc-500">Calibrate</span>}>
+              <HeaderLink href="/calibrate">Calibrate</HeaderLink>
+            </Suspense>
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <button
@@ -199,6 +202,7 @@ const SECTIONS = [
   ["rallies", "Rallies"],
   ["shots", "Shots"],
   ["highlights", "Highlights"],
+  ["court", "Court calibration"],
 ] as const;
 
 function CommandPalette({ onClose }: { onClose: () => void }) {
@@ -227,6 +231,8 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
           keywords: `rally ${r.id}`,
         });
     }
+    out.push({ id: "calibrate", group: "Tools", label: "Calibrate a court", hint: "for a new video",
+      href: "/calibrate", keywords: "court calibration lines camera" });
     for (const m of runs ?? [])
       out.push({
         id: `m-${m.id}`,

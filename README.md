@@ -47,6 +47,8 @@ one click (or one <kbd>Ctrl</kbd>+<kbd>K</kbd> search) away:
 | **Rallies** | Every rally, sortable and filterable, with its shot map and a shot-by-shot breakdown |
 | **Shots** | Where each team's shots landed, and every measured shot speed with its uncertainty |
 | **Highlights** | The highlights video and condensed match, with a clip list |
+| **Court** | The match's court calibration: check it, fix it by clicking court lines, and re-run the analysis with it |
+| **Calibrate** | Calibrate a new camera position before its first video is analysed; the result goes into the notebook |
 
 The app reads results only; detection runs in the notebooks. Its API re-runs the light stages (identities, ball
 tracking, events, statistics) with the current code when a match is imported.
@@ -148,8 +150,12 @@ installs the package and fetches the weights itself.
 | [`09_retrain_ball`](ml/notebooks/09_retrain_ball.ipynb) | Fine-tunes the ball detector on a new court, compares old and new models, and builds an evaluation pack |
 | `00`–`05` | Setup check, player analytics, ball label bootstrap, detector bake-off, ball training, ball tracking |
 
-A new camera position needs a court calibration once (`padelvision calibrate frame.png -o court.json`).
-Calibrations live in `ml/calibrations/<video name>.json` and are picked up automatically.
+A new camera position needs a court calibration once. Without one, notebook 08 stops and saves
+`calibration.zip` (a frame and a background with the players removed). Open it on the web app's **Calibrate**
+page: pick a court line, click two or more points along it and the clicks snap onto the painted line or wall
+edge; the fitted court is drawn live with its accuracy per zone. Copy the result into the notebook's
+`COURT_JSON_TEXT`, or save it as `ml/calibrations/<video name>.json` (picked up automatically). The OpenCV tool
+`padelvision calibrate frame.png -o court.json` does the same without the web app.
 
 ## Command line
 

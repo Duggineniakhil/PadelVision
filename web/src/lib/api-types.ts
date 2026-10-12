@@ -208,6 +208,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/calibration/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Calibration Image
+         * @description An image to calibrate on: a frame / background.png, or notebook 08's calibration.zip.
+         */
+        post: operations["upload_calibration_image_api_calibration_images_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calibration/images/{image_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Calibration Image */
+        get: operations["get_calibration_image_api_calibration_images__image_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calibration/snap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Snap
+         * @description Snap roughly clicked points onto the painted line (or edge) they lie along.
+         */
+        post: operations["snap_api_calibration_snap_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calibration/fit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fit */
+        post: operations["fit_api_calibration_fit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/court": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run Court */
+        get: operations["get_run_court_api_runs__run_id__court_get"];
+        /**
+         * Save Run Court
+         * @description Save a new calibration and recompute the analysis that depends on it.
+         */
+        put: operations["save_run_court_api_runs__run_id__court_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/court/background": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Background
+         * @description The court without players: median of frames from the attached video (takes a while).
+         */
+        post: operations["run_background_api_runs__run_id__court_background_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/court/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore Run Court
+         * @description Swap back to the calibration used before the last save.
+         */
+        post: operations["restore_run_court_api_runs__run_id__court_restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -229,6 +364,11 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** Body_upload_calibration_image_api_calibration_images_post */
+        Body_upload_calibration_image_api_calibration_images_post: {
+            /** Files */
+            files: string[];
+        };
         /** Body_upload_video_api_runs__run_id__video_post */
         Body_upload_video_api_runs__run_id__video_post: {
             /** File */
@@ -246,6 +386,97 @@ export interface components {
             y_m: number;
             /** Zone */
             zone: string;
+        };
+        /** CalibrationAccuracy */
+        CalibrationAccuracy: {
+            /** Rms Px */
+            rms_px?: number | null;
+            /** Constraints Px */
+            constraints_px: {
+                [key: string]: number;
+            };
+            /** Zones */
+            zones: {
+                [key: string]: components["schemas"]["ZoneAccuracy"];
+            };
+        };
+        /** CalibrationFit */
+        CalibrationFit: {
+            accuracy: components["schemas"]["CalibrationAccuracy"];
+            /** Court Lines */
+            court_lines: [
+                number,
+                number
+            ][][];
+            /** Keypoints */
+            keypoints: {
+                [key: string]: [
+                    number,
+                    number
+                ];
+            };
+            lens: components["schemas"]["Lens"];
+            /** Line Rms Px */
+            line_rms_px?: number | null;
+            /** Court Json */
+            court_json: {
+                [key: string]: unknown;
+            };
+        };
+        /** CalibrationImage */
+        CalibrationImage: {
+            /** Id */
+            id: string;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "upload" | "video";
+        };
+        /**
+         * CalibrationInput
+         * @description Clicked constraints (raw image pixels). `lens` given = keep that lens, else it is fitted
+         *     from the lines with >= 3 points (identity if fewer than 2 such lines).
+         */
+        CalibrationInput: {
+            /** Image Size */
+            image_size: [
+                number,
+                number
+            ];
+            /**
+             * Image Points
+             * @default {}
+             */
+            image_points: {
+                [key: string]: [
+                    number,
+                    number
+                ];
+            };
+            /**
+             * Named Lines
+             * @default {}
+             */
+            named_lines: {
+                [key: string]: [
+                    number,
+                    number
+                ][];
+            };
+            /**
+             * Lines
+             * @default []
+             */
+            lines: [
+                number,
+                number
+            ][][];
+            lens?: components["schemas"]["Lens"] | null;
         };
         /** Clip */
         Clip: {
@@ -333,6 +564,19 @@ export interface components {
             total_s: number;
             /** Clips */
             clips: components["schemas"]["Clip"][];
+        };
+        /** Lens */
+        Lens: {
+            /** K1 */
+            k1: number;
+            /** K2 */
+            k2: number;
+            /** F */
+            f: number;
+            /** Cx */
+            cx: number;
+            /** Cy */
+            cy: number;
         };
         /**
          * OverlayResponse
@@ -487,6 +731,22 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** RunCourt */
+        RunCourt: {
+            calibration?: components["schemas"]["CalibrationInput"] | null;
+            accuracy?: components["schemas"]["CalibrationAccuracy"] | null;
+            /** Video Size */
+            video_size: [
+                number,
+                number
+            ];
+            /** Has Video */
+            has_video: boolean;
+            /** Can Recompute */
+            can_recompute: boolean;
+            /** Has Previous */
+            has_previous: boolean;
+        };
         /** RunDetail */
         RunDetail: {
             /** Id */
@@ -581,6 +841,30 @@ export interface components {
             speed_note?: string | null;
             /** No Landing */
             no_landing?: ("probably_volley" | "not_seen") | null;
+        };
+        /** SnapRequest */
+        SnapRequest: {
+            /** Image Id */
+            image_id: string;
+            /** Guide */
+            guide: [
+                number,
+                number
+            ][];
+            /**
+             * Mode
+             * @default paint
+             * @enum {string}
+             */
+            mode: "paint" | "edge";
+        };
+        /** SnapResult */
+        SnapResult: {
+            /** Points */
+            points: [
+                number,
+                number
+            ][];
         };
         /** SpeedSummary */
         SpeedSummary: {
@@ -1158,6 +1442,266 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HighlightsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_calibration_image_api_calibration_images_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_calibration_image_api_calibration_images_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationImage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_calibration_image_api_calibration_images__image_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    snap_api_calibration_snap_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnapRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fit_api_calibration_fit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalibrationInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationFit"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_court_api_runs__run_id__court_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunCourt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_run_court_api_runs__run_id__court_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalibrationInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunListItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_background_api_runs__run_id__court_background_post: {
+        parameters: {
+            query?: {
+                refresh?: boolean;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalibrationImage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_run_court_api_runs__run_id__court_restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunListItem"];
                 };
             };
             /** @description Validation Error */

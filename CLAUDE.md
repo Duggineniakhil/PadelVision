@@ -57,7 +57,13 @@ retraining the ball detector with this court; tracker rules can't recover undete
   serves JSON views (`views.py`), media and the match video (HTTP Range). A video is attached by local path or
   upload and checked by frame count + aspect ratio (any resolution of the same footage). `web/` (Next.js 16 App
   Router, TS strict, Tailwind 4, SWR): Matches, then per match Overview / Video / Players / Rallies / Shots /
-  Highlights, Ctrl+K command palette. Video overlays are drawn on a canvas from /overlay windows, synced with
+  Highlights / Court, Ctrl+K command palette. Court calibration in the browser (`components/calibration.tsx`): pick a named line,
+  click >= 2 points along it, the API snaps them (`court/snap.py`: "paint" = bright thin strip, "edge" = strongest
+  colour change, e.g. floor/wall; the peak nearest the clicks wins, outliers vs a smooth curve dropped) and refits
+  live (`/api/calibration/fit`: accuracy + projected court lines). `/calibrate` exports court.json for a new video
+  (image = notebook 08's calibration.zip); a match's Court tab uses the median background of its attached video
+  (`video.median_background`, cached in <runs>/_calibration) and saving rewrites court.json (old one kept as
+  court.prev.json, restorable) and re-runs restats / ball-retrack / events; needs detections.parquet (run_cache.zip). Video overlays are drawn on a canvas from /overlay windows, synced with
   requestVideoFrameCallback. Next 16 has Cache Components on: pages are a server `page.tsx` (`instant = false`)
   rendering a client `view.tsx`; URL hooks sit under `<Suspense>`. Read `web/node_modules/next/dist/docs/` before
   using Next APIs (see web/AGENTS.md). API types: `python scripts/export_openapi.py && (cd web && npm run gen:api)`.
@@ -65,7 +71,7 @@ retraining the ball detector with this court; tracker rules can't recover undete
 
 Don't invent commands for tooling that hasn't been set up; add them here once they exist.
 
-Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, drawing),
+Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, line snapping, drawing),
 `models/` (manifest registry, `person_tracker.py`, the only ultralytics import), `players/`
 (stage 2 detection, stage 3 on-court filtering + identities), `ball/` (bootstrap, labelling, evaluation,
 dataset, stage 4 tracking), `events.py` (stage 5), `analytics/movement.py` + `analytics/rallies.py` (stage 6),

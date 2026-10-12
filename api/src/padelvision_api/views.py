@@ -181,27 +181,12 @@ def court_info(run: Path) -> S.CourtInfo | None:
 @lru_cache(maxsize=16)
 def _court_info_cached(path: str, mtime: float) -> S.CourtInfo:
     from padelvision.court import CourtCalibration
-    from padelvision.court.geometry import COURT_LINES
+    from padelvision.court.draw import court_polylines
 
     cal = CourtCalibration.load(path)
     w, h = cal.image_size
-    lines = []
-    for (x0, y0), (x1, y1) in COURT_LINES:
-        t = np.linspace(0, 1, 60)[:, None]
-        px = cal.to_image(np.c_[x0 + (x1 - x0) * t, y0 + (y1 - y0) * t])
-        near = (np.abs(px[:, 0] - w / 2) < 1.5 * w) & (np.abs(px[:, 1] - h / 2) < 1.5 * h)
-        ok = np.isfinite(px).all(axis=1) & near
-        run_pts: list[tuple[float, float]] = []
-        for good, p in zip(ok, px, strict=True):
-            if good:
-                run_pts.append((round(float(p[0]), 1), round(float(p[1]), 1)))
-            elif len(run_pts) > 1:
-                lines.append(run_pts)
-                run_pts = []
-            else:
-                run_pts = []
-        if len(run_pts) > 1:
-            lines.append(run_pts)
+    lines = [[(round(float(x), 1), round(float(y), 1)) for x, y in seg]
+             for seg in court_polylines(cal, samples=60)]  # fmt: skip
     acc = cal.accuracy()
     zones = {k: S.ZoneAccuracy(**v) for k, v in acc["zones"].items()}
     return S.CourtInfo(image_width=w, image_height=h, rms_px=acc["rms_px"], zones=zones,

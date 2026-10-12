@@ -141,6 +141,10 @@ Code loads models only through `padelvision.models.registry.load(name)`.
 
 **Phase 4 — Local web app**
 - FastAPI + Next.js: upload, calibration, progress, dashboard with canvas overlays.
+- *Built:* import of the notebooks' result zips (detection stays on Kaggle/Colab: the laptop can't run it),
+  background re-runs of the light stages with progress, dashboard with canvas overlays, and court calibration
+  in the browser (click + snap court lines, live fit and per-zone accuracy; a new video's court.json, or a
+  match's calibration fixed and its analysis re-run).
 
 **Phase 5 — Extras (pick any)**
 - Automatic court keypoints, shot types, highlights, TrackNet ball model, HF Space demo.

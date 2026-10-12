@@ -16,6 +16,7 @@ const TABS = [
   ["rallies", "Rallies"],
   ["shots", "Shots"],
   ["highlights", "Highlights"],
+  ["court", "Court"],
 ] as const;
 
 export function MatchLayout({ children }: { children: ReactNode }) {

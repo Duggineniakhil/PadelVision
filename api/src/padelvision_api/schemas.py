@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -229,3 +229,67 @@ class AttachVideo(BaseModel):
 
 class RenameRun(BaseModel):
     name: str
+
+
+# --- court calibration ------------------------------------------------------------------------
+Point = tuple[float, float]
+
+
+class Lens(BaseModel):
+    k1: float
+    k2: float
+    f: float
+    cx: float
+    cy: float
+
+
+class CalibrationInput(BaseModel):
+    """Clicked constraints (raw image pixels). `lens` given = keep that lens, else it is fitted
+    from the lines with >= 3 points (identity if fewer than 2 such lines)."""
+
+    image_size: tuple[int, int]
+    image_points: dict[str, Point] = {}
+    named_lines: dict[str, list[Point]] = {}
+    lines: list[list[Point]] = []  # other straight lines (lens only)
+    lens: Lens | None = None
+
+
+class CalibrationAccuracy(BaseModel):
+    rms_px: float | None = None
+    constraints_px: dict[str, float]
+    zones: dict[str, ZoneAccuracy]
+
+
+class CalibrationFit(BaseModel):
+    accuracy: CalibrationAccuracy
+    court_lines: list[list[Point]]  # projected court lines (px), split where not visible
+    keypoints: dict[str, Point]  # projected court keypoints near the image
+    lens: Lens
+    line_rms_px: float | None = None
+    court_json: dict[str, Any]  # what is saved as court.json
+
+
+class CalibrationImage(BaseModel):
+    id: str
+    width: int
+    height: int
+    source: Literal["upload", "video"]
+
+
+class SnapRequest(BaseModel):
+    image_id: str
+    guide: list[Point]
+    mode: Literal["paint", "edge"] = "paint"
+
+
+class SnapResult(BaseModel):
+    points: list[Point]
+
+
+class RunCourt(BaseModel):
+    calibration: CalibrationInput | None = None
+    accuracy: CalibrationAccuracy | None = None
+    video_size: tuple[int, int]
+    has_video: bool
+    can_recompute: bool  # raw detections present, so a new calibration can be applied
+    has_previous: bool

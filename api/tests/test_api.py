@@ -165,3 +165,62 @@ def test_add_highlight_files_to_an_existing_run(client):
         f"/api/runs/{run_id}/files", files=[("files", ("x.zip", _zip({"stats.json": "{}"})))]
     )
     assert r.status_code == 422 and "No highlight videos" in r.json()["detail"]
+
+
+def _png(w=320, h=180) -> bytes:
+    import cv2
+    import numpy as np
+
+    img = np.full((h, w, 3), (150, 90, 40), np.uint8)
+    cv2.line(img, (10, 120), (310, 120), (235, 235, 235), 3)
+    return cv2.imencode(".png", img)[1].tobytes()
+
+
+def _synthetic_constraints(w=1280, h=720):
+    """Keypoints projected by a plausible camera homography (no lens)."""
+    import numpy as np
+    from padelvision.court.geometry import COURT_KEYPOINTS
+
+    hmat = np.array([[60.0, 0.0, 640.0], [0.0, -12.0, 360.0], [0.0, 0.06, 1.0]])
+    pts = {}
+    for name in ("near_left", "near_right", "net_left", "net_right", "far_left", "far_right",
+                 "near_service_center", "far_service_center"):  # fmt: skip
+        x, y, s = hmat @ [*COURT_KEYPOINTS[name], 1.0]
+        pts[name] = [x / s, y / s]
+    return {"image_size": [w, h], "image_points": pts}
+
+
+def test_calibration_image_snap_fit_and_run_court(client):
+    r = client.post("/api/calibration/images", files=[("files", ("frame.png", _png()))])
+    assert r.status_code == 201
+    img = r.json()
+    assert (img["width"], img["height"], img["source"]) == (320, 180, "upload")
+    assert client.get(f"/api/calibration/images/{img['id']}").status_code == 200
+    assert client.get("/api/calibration/images/..%2Fx").status_code == 404
+    zipped = _zip({"background.png": "x"}, "calibration")  # unreadable image inside a zip
+    upload = [("files", ("calibration.zip", zipped))]
+    assert client.post("/api/calibration/images", files=upload).status_code == 422
+
+    r = client.post("/api/calibration/snap",
+                    json={"image_id": img["id"], "guide": [[20, 116], [300, 124]]})  # fmt: skip
+    pts = r.json()["points"]
+    assert len(pts) > 20 and all(abs(y - 120) < 1 for _, y in pts)
+
+    body = _synthetic_constraints()
+    fit = client.post("/api/calibration/fit", json=body).json()
+    assert fit["accuracy"]["rms_px"] < 0.01 and len(fit["court_lines"]) >= 6
+    assert set(fit["court_json"]) >= {"image_size", "image_points", "image_to_court", "lens"}
+    too_few = {"image_size": [1280, 720], "image_points": {"near_left": [1, 2]}}
+    bad = client.post("/api/calibration/fit", json=too_few)
+    assert bad.status_code == 422 and "at least 4" in bad.json()["detail"]
+
+    run_id = _import(client).json()["id"]
+    _wait_ready(client, run_id)
+    court = client.get(f"/api/runs/{run_id}/court").json()
+    assert court["calibration"] is None and court["video_size"] == [1280, 720]
+    assert not court["can_recompute"] and not court["has_video"]
+    r = client.put(f"/api/runs/{run_id}/court", json=body)
+    assert r.status_code == 422 and "raw detections" in r.json()["detail"]
+    r = client.post(f"/api/runs/{run_id}/court/background")
+    assert r.status_code == 422 and "video" in r.json()["detail"]
+    assert client.post(f"/api/runs/{run_id}/court/restore").status_code == 422

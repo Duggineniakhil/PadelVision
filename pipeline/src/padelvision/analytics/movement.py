@@ -3,6 +3,14 @@
 Only measured data is used. Gaps longer than MAX_GAP_S are never filled; a player
 tracked for less than MIN_TRACKED_FRACTION of the analysed time gets null metrics
 with a reason instead of numbers.
+
+Position jumps: a box can slide (feet hidden behind the net band) or the tracker can move
+onto another box. Smoothing turns such a jump into a believable 20-30 km/h run, so before
+smoothing, stretches where the raw position moves further within JUMP_WINDOW_S than a player
+can run (MAX_SPEED_MPS) plus JUMP_SIGMAS times its measurement error are dropped and the
+track is split there. Tracks are also split where the tracker id changes (a new id may be
+another box; on the far side a 2 m jump is within the position error, so only the id change
+shows it). Peak speed must be held for PEAK_MIN_S (sprints already need that).
 """
 
 from __future__ import annotations
@@ -20,6 +28,9 @@ MAX_SPEED_MPS = 8.0  # faster steps are tracking errors, not running
 SPRINT_SPEED_MPS = 4.0
 SPRINT_MIN_S = 0.5
 MIN_TRACKED_FRACTION = 0.3
+JUMP_WINDOW_S = 0.5
+JUMP_SIGMAS = 3.0
+PEAK_MIN_S = 0.5
 
 TRACK_COLUMNS = ["frame", "t", "player", "x", "y", "vx", "vy", "segment"]
 
@@ -38,6 +49,22 @@ def smooth_tracks(players: pd.DataFrame, fps: float, stride: int = 1) -> pd.Data
         new = np.diff(frames) / fps > MAX_GAP_S
         if "slot" in p:  # a person moves to another court position slot at a changeover
             new |= np.diff(p.slot.to_numpy()) != 0
+        if "track_id" in p:  # a new tracker id may be another box: never smooth across it
+            new |= np.diff(p.track_id.to_numpy()) != 0
+        runs = np.concatenate([[0], np.cumsum(new)])
+        jump = np.zeros(len(p), dtype=bool)
+        for r in np.unique(runs):
+            idx = np.nonzero(runs == r)[0]
+            jump[idx] = _jumps(p.iloc[idx], fps)
+        # Split where rows were dropped, as well as at long gaps and slot changes.
+        keep = ~jump
+        dropped_before = np.r_[0, np.cumsum(jump)][:-1][keep]
+        new = np.diff(frames[keep]) / fps > MAX_GAP_S
+        new |= np.diff(runs[keep]) != 0
+        new |= np.diff(dropped_before) != 0
+        p = p[keep]
+        if p.empty:
+            continue
         seg_ids = np.concatenate([[0], np.cumsum(new)])
         for seg, s in p.groupby(seg_ids):
             grid = np.arange(s.frame.iloc[0], s.frame.iloc[-1] + 1, stride)
@@ -51,6 +78,30 @@ def smooth_tracks(players: pd.DataFrame, fps: float, stride: int = 1) -> pd.Data
     if not out:
         return pd.DataFrame(columns=TRACK_COLUMNS)
     return pd.concat(out, ignore_index=True)
+
+
+def _jumps(p: pd.DataFrame, fps: float) -> np.ndarray:
+    """Rows inside a stretch the player can't have covered (see the module docstring)."""
+    n = len(p)
+    bad = np.zeros(n, dtype=bool)
+    if n < 2:
+        return bad
+    t = p.frame.to_numpy() / fps
+    xy = p[["x_m", "y_m"]].to_numpy()
+    var = np.full(n, 2 * POS_NOISE_FLOOR_M**2)
+    if {"rxx", "ryy"} <= set(p.columns):
+        var = var + p.rxx.fillna(0).to_numpy() + p.ryy.fillna(0).to_numpy()
+    # each row against the last row within JUMP_WINDOW_S (shorter at the end of a track)
+    j = np.searchsorted(t, t + JUMP_WINDOW_S, side="right") - 1
+    i = np.nonzero(j > np.arange(n))[0]
+    j = j[i]
+    disp = np.hypot(*(xy[j] - xy[i]).T)
+    tol = MAX_SPEED_MPS * (t[j] - t[i]) + JUMP_SIGMAS * np.sqrt(var[i] + var[j])
+    marks = np.zeros(n + 1, dtype=int)  # mark rows i..j of every implausible window
+    for a, b in zip(i[disp > tol], j[disp > tol], strict=True):
+        marks[a] += 1
+        marks[b + 1] -= 1
+    return np.cumsum(marks)[:n] > 0
 
 
 def _covariances(s: pd.DataFrame) -> np.ndarray:
@@ -91,13 +142,16 @@ def movement_stats(
 
 def _player_metrics(tr: pd.DataFrame, dt: float) -> dict:
     distance, tracked_s, sprints, outliers, peak = 0.0, 0.0, 0, 0, 0.0
+    hold = max(round(PEAK_MIN_S / dt), 1)
     for _, s in tr.groupby("segment"):
         tracked_s += len(s) * dt
         speed = np.hypot(s.vx, s.vy).to_numpy()
         ok = speed <= MAX_SPEED_MPS
         outliers += int((~ok).sum())
-        if ok.any():
-            peak = max(peak, float(speed[ok].max()))
+        if ok.sum() >= hold:  # the fastest speed held for PEAK_MIN_S
+            held = pd.Series(np.where(ok, speed, np.nan)).rolling(hold).min().max()
+            if np.isfinite(held):
+                peak = max(peak, float(held))
         sprints += _count_runs(ok & (speed >= SPRINT_SPEED_MPS), round(SPRINT_MIN_S / dt))
         if len(s) > 1:
             step = np.hypot(np.diff(s.x), np.diff(s.y))

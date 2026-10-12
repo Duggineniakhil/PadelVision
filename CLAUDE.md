@@ -30,6 +30,12 @@ retraining the ball detector with this court; tracker rules can't recover undete
   HUD are per person; event/rally geometry stays side-based. stats.json `persons` holds the evidence. GX010012:
   changeovers at 40 s (likely), 283, 543 (strong), 858 s (likely) = every 2 games; side habit consistent in all 5
   periods (left share ~0.85 vs ~0.2 for pair A); 7 unresolved gatherings. Not checked against the video by eye.
+  Test_video: one changeover at 98 s (likely), confirmed by eye on review frames (black-shirt pair near before,
+  white-shirt pair near after).
+- Movement (stage 6, `analytics/movement.py`): before smoothing, stretches where the raw position moves further in
+  0.5 s than 8 m/s + 3 sigma (feet hidden behind the net band, the tracker moving onto another box) are dropped;
+  tracks are split at tracker-id changes (on the far side a 2 m jump is within the position error); peak speed
+  must be held 0.5 s. GX010012 peaks 19-26 -> 12-20 km/h, distances -1-3%.
   Appearance (shirt colours) would settle unresolved gatherings but needs a pixel pass on Kaggle.
 - Ball detector: own YOLO11s (`ball-detector` in the manifest, GitHub release `ball-yolo11s-v1`, card
   `docs/models/padel_ball_yolo11s.md`), fine-tuned on Test_video pseudo-labels + Roboflow Universe data

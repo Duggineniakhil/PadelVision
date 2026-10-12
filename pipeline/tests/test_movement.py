@@ -95,3 +95,27 @@ def test_far_side_depth_noise_does_not_create_sprints():
     assert p3["sprints"] == 0
     assert p3["peak_speed_mps"] < 1.5
     assert p3["distance_m"] < 6.0  # raw jitter path would be ~190 m
+
+
+def test_box_sliding_away_is_not_a_run():
+    # Feet hidden behind the net band: the position slides 0.3 -> 6 m deep in 0.5 s, then stays.
+    f = np.arange(300)
+    t = f / FPS
+    y = np.interp(t, [0, 4.0, 4.5, 10], [0.3, 0.3, 6.0, 6.0])
+    players = _players({3: (f, np.full(300, -0.8), y)})
+    p3 = _stats(players, 300)["players"]["3"]
+    assert p3["peak_speed_mps"] < 1.0
+    assert p3["sprints"] == 0
+    assert p3["distance_m"] < 1.0
+
+
+def test_peak_speed_must_be_held():
+    # 0.35 s at 7.5 m/s inside steady walking is not the peak; a 1 s run at 5 m/s is.
+    f = np.arange(600)
+    t = f / FPS
+    v = np.where((t > 3) & (t < 3.35), 7.5, 1.0)
+    v = np.where((t > 12) & (t < 13), 5.0, v)
+    x = np.cumsum(v) / FPS - 4
+    players = _players({1: (f, x, np.full(600, -6.0))})
+    p1 = _stats(players, 600)["players"]["1"]
+    assert 4.5 < p1["peak_speed_mps"] < 5.3

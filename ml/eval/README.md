@@ -43,6 +43,20 @@ visually on full-resolution crop strips (-0.2 s .. +0.2 s) by Claude, not by a h
 bounce | none | duplicate (a second turn of the same contact) | unclear. It measures precision and hit
 attribution only: events the pipeline missed entirely are not in it, so it says nothing about recall.
 
+### Unclassified turns: missed hits, not wall bounces (2026-10-13, GX010012, not adopted)
+The 38 turns inside GX010012's rallies were checked against the hit rules: 14 far from any player, 12 just
+outside a reach zone (< 0.3 box heights), 10 inside one but failing the ball-size check (ball 0.35-0.65 x the
+expected size, all near players), 2 other. By eye on the condensed video several are volleys or shots next to the
+fence, none clearly a wall bounce; but a small ball next to a big near-player box is often a ball high over the
+far court seen behind that player, so the size check is not simply wrong. Tried: a second chance for turns that
+aren't bounces, near a reach zone, ball >= 0.4 x expected, whose ball size trend reverses the way a hit by that
+side would (near: growing then shrinking; far: the opposite), border detections excluded. Test_video: +1 hit, the
+known missed one (f1212), bounces unchanged. GX010012: +16 hits (112 -> 126 after merges); of 4 checkable by
+eye 1 right, 1 wrong (a ball leaving the frame near the camera), 2 unclear. Not adopted: a 12 % change in hit
+counts with unknown precision. Decide it with exhaustive `label-events` labels (hits, bounces and walls) on
+GX010012; the wall label there is also what wall-bounce detection needs (no confirmed wall bounce exists yet:
+the 7 old "wall" predictions on Test_video were all wrong).
+
 ## Player identities (phase 1): visual review
 Ids are side slots (1-2 near, 3-4 far), not specific people across changeovers. An ID switch is a slot moving to a
 different person during play. `labels/Test_video_id_review.csv`: every point inside the event pack's windows

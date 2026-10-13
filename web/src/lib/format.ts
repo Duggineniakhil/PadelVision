@@ -35,6 +35,22 @@ export function date(iso: string): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
+export const SHOT_TYPE_LABEL: Record<string, string> = {
+  serve: "Serve",
+  overhead: "Overhead",
+  lob: "Lob",
+  volley: "Volley",
+  groundstroke: "Groundstroke",
+};
+export const SHOT_TYPES = ["serve", "groundstroke", "volley", "overhead", "lob"] as const;
+
+/** "Volley · forehand" for a typed shot, null when the type is unknown. */
+export function shotTypeLabel(s: { type?: string | null; side?: string | null }): string | null {
+  const t = s.type ? SHOT_TYPE_LABEL[s.type] : undefined;
+  if (!t) return s.side ? s.side.charAt(0).toUpperCase() + s.side.slice(1) : null;
+  return s.side ? `${t} · ${s.side}` : t;
+}
+
 /** A team's name. After changeovers a pair plays both ends, so it is named by pair: team A is the
  * pair that started on the near side (players 1 and 2). */
 export const teamName = (team: "near" | "far", pairs = false) =>

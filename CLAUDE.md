@@ -73,6 +73,13 @@ retraining the ball detector with this court; tracker rules can't recover undete
   32.7, 137.3, 196.5 s are real; 9.0 s probably not. GX010012: 37 serves (14 confirmed), 32 points; games not
   countable (far serves mostly missed by the ball detector; returns after a missed serve look like serves; the ball
   before a hit can't tell them apart yet because the tracker may follow a spare ball). Who won a point: not attempted.
+- Shot types (stage 5c, `analytics/shots.py`, rallies.json stats.shots[].type / side / basis, stats.shot_types):
+  serve (5b) > overhead (ball above the hitter's box top at contact) > lob (landing seen behind the service line
+  after >= 1.6 s) > volley (opponents' shot "probably_volley") > groundstroke (opponents' shot landed) > unknown.
+  Side for near players only (seen from behind: ball right of the box centre by >= 0.15 widths = forehand, assuming
+  right-handed). Checked by eye on Test_video's 18 rally shots: overheads 3/3, serves plausible, no clearly wrong
+  type, 6 unknown (67 % typed). GX010012: 70 % typed. Check by hand: `shot-review-pack` (nb 07 section 5) ->
+  `label-shots` -> `shots-eval` (`shots_review.py`).
 - Videos: `render` (preview) and `highlights` (`highlights.py`: rallies ranked by hits + length + fastest
   measured shot, cut and joined, title card per clip, ball trail, and after each clip a 3 s summary card from
   `visuals.rally_card`: per-player heatmaps of that rally + shot map = hitter's feet -> landing bounce, the
@@ -105,7 +112,8 @@ Pipeline modules: `court/` (geometry, lens distortion, calibration, click tool, 
 calibration, drawing),
 `models/` (manifest registry, `person_tracker.py`, the only ultralytics import), `players/`
 (stage 2 detection, stage 3 on-court filtering + identities, stage 3b changeovers -> persons), `ball/` (bootstrap, labelling, evaluation,
-dataset, stage 4 tracking), `events.py` (stage 5), `analytics/points.py` (stage 5b: serves, points, games),
+dataset, stage 4 tracking), `events.py` (stage 5), `analytics/points.py` (stage 5b: serves, points, games), `analytics/shots.py`
+(stage 5c: shot types),
 `analytics/movement.py` + `analytics/rallies.py` (stage 6),
 `visuals.py` (heatmaps, placement map), `render.py` (preview video), `events_review.py` /
 `events_label_tool.py` / `events_eval.py` (hit/bounce labelling + scoring), `run.py` (stage orchestration).
@@ -177,6 +185,9 @@ padelvision ball-track <video> --run runs/match1               # stage 4: ball i
 padelvision event-review-pack <video> --run runs/match1 --out event_review   # frames to label hits/bounces in
 #   long matches: --max-seconds 150 --turn-share 0.4 (rallies sampled over the match + windows around unclassified
 #   turns + random); notebook 07 section 4 (MAKE_EVENT_PACK = True) builds it as event_review.zip
+padelvision shot-review-pack <video> --run runs/match1 --out shot_review   # clips of rally shots (nb 07 s5)
+.venv/Scripts/padelvision label-shots data/shot_review   # local: one key per shot (S G V O L, F/B side, X)
+.venv/Scripts/padelvision shots-eval data/shot_review    # accuracy per shot type
 # Local: label the downloaded review pack (Y = ring on ball, click = ball, N = none, M = motion view)
 .venv/Scripts/padelvision label-ball data/ball_review
 # Local again: redo stages 3-7 from a downloaded Kaggle run folder (no video/GPU needed)

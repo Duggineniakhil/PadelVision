@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Play } from "lucide-react";
 import { useHighlights, useRallies, type Rally, type Shot } from "@/lib/api";
-import { clock, num, ZONE_LABEL } from "@/lib/format";
+import { clock, num, ZONE_LABEL, shotTypeLabel } from "@/lib/format";
 import { PLAYER_TEAM } from "@/lib/court";
 import { CourtSvg, ShotLayer } from "@/components/court";
 import { useMatch } from "@/components/match";
@@ -242,6 +242,11 @@ function RallyDetail({
                 <span className="tabular w-4 text-right text-xs font-medium text-zinc-400">{s.index}</span>
                 <TeamDot team={PLAYER_TEAM[s.player] ?? s.team} />
                 <span className="font-medium text-zinc-900">Player {s.player}</span>
+                {shotTypeLabel(s) && (
+                  <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-700" title={s.type_basis ?? undefined}>
+                    {shotTypeLabel(s)}
+                  </span>
+                )}
                 <span className="tabular ml-auto text-xs text-zinc-500">{clock(s.t)}</span>
               </div>
               <div className="ml-6 mt-0.5 text-xs text-zinc-600">{shotOutcome(s)}</div>

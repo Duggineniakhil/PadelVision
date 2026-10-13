@@ -21,6 +21,7 @@ runs/<name>/
   rallies.json             stage 5  rallies (segments with an exchange) + other ball activity
                                     + rally stats (counts, placement, shot speed estimate)
                                     + points (stage 5b: serves, points, games estimate)
+                                    + shot types (stage 5c: stats.shots[].type / side)
   placement.png            stage 7  where each team's shots landed
 """
 
@@ -286,6 +287,12 @@ def events(run_dir: str | Path) -> dict:
     summary["points"] = points_summary(
         ev, players, fps, int(info["frame_count"]) - 1, persons.get("changeovers", [])
     )
+    from padelvision.analytics.shots import classify_shots
+    from padelvision.analytics.shots import summary as shot_summary
+
+    shots = summary["stats"].get("shots", [])
+    classify_shots(shots, ev, players, fps, {s["frame"] for s in summary["points"]["serves"]})
+    summary["stats"]["shot_types"] = shot_summary(shots)
     (out / "rallies.json").write_text(json.dumps(summary, indent=2))
     save_placement_map(summary["stats"], out / "placement.png")
     speed = summary["stats"].get("shot_speed_estimate", {})
@@ -297,6 +304,8 @@ def events(run_dir: str | Path) -> dict:
         f"{speed.get('median_kmh', speed.get('insufficient_data'))} "
         f"(median km/h, {speed.get('samples', 0)} shots)"
     )
+    st = summary["stats"]["shot_types"]
+    print(f"[5c] shot types {st['counts']} ({st['known_share']} typed)")
     pc, games = summary["points"]["counts"], summary["points"]["games_estimate"]
     print(
         f"[5b] serves {pc['serves']} ({pc['confirmed']} confirmed), points {pc['points']} "

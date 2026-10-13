@@ -530,7 +530,7 @@ export interface components {
              * Evidence
              * @enum {string}
              */
-            evidence: "strong" | "likely";
+            evidence: "strong" | "likely" | "colours";
         };
         /** Clip */
         Clip: {
@@ -703,6 +703,10 @@ export interface components {
              * @default 0
              */
             shot_speed_samples: number;
+            /** Shot Types */
+            shot_types?: {
+                [key: string]: number;
+            } | null;
         };
         /** PlayerTrack */
         PlayerTrack: {
@@ -923,6 +927,12 @@ export interface components {
             speed_note?: string | null;
             /** No Landing */
             no_landing?: ("probably_volley" | "not_seen") | null;
+            /** Type */
+            type?: ("serve" | "overhead" | "lob" | "volley" | "groundstroke" | "unknown") | null;
+            /** Side */
+            side?: ("forehand" | "backhand") | null;
+            /** Type Basis */
+            type_basis?: string | null;
         };
         /** SnapRequest */
         SnapRequest: {

@@ -1490,7 +1490,8 @@
       "type": "string",
       "enum": [
        "strong",
-       "likely"
+       "likely",
+       "colours"
       ],
       "title": "Evidence"
      }
@@ -2054,6 +2055,20 @@
       "type": "integer",
       "title": "Shot Speed Samples",
       "default": 0
+     },
+     "shot_types": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "integer"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Shot Types"
      }
     },
     "type": "object",
@@ -2781,6 +2796,51 @@
        }
       ],
       "title": "No Landing"
+     },
+     "type": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "serve",
+         "overhead",
+         "lob",
+         "volley",
+         "groundstroke",
+         "unknown"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Type"
+     },
+     "side": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "forehand",
+         "backhand"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Side"
+     },
+     "type_basis": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Type Basis"
      }
     },
     "type": "object",

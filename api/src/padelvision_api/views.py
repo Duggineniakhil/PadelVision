@@ -117,6 +117,7 @@ def detail(run: Path) -> S.RunDetail:
 def _players(stats: dict, rallies: dict | None) -> list[S.PlayerStats]:
     hits = (rallies or {}).get("hits_by_player", {})
     sp = (rallies or {}).get("stats", {}).get("shot_speed_estimate", {})
+    types = (rallies or {}).get("stats", {}).get("shot_types", {}).get("by_player", {})
     out = []
     for pid, p in sorted(stats.get("players", {}).items(), key=lambda kv: int(kv[0])):
         ok = "insufficient_data" not in p
@@ -135,6 +136,7 @@ def _players(stats: dict, rallies: dict | None) -> list[S.PlayerStats]:
             shot_speed_median_kmh=sp.get("by_player_median_kmh", {}).get(pid),
             shot_speed_max_kmh=sp.get("by_player_max_kmh", {}).get(pid),
             shot_speed_samples=int(sp.get("by_player_samples", {}).get(pid, 0)),
+            shot_types=types.get(pid),
         ))  # fmt: skip
     return out
 
@@ -281,6 +283,7 @@ def rallies(run: Path) -> S.RalliesResponse:
                                 y_m=b["y_m"], zone=b["zone"]) if b else None,
                 speed_kmh=s.get("speed_kmh"), speed_range_kmh=tuple(rng) if rng else None,
                 speed_note=s.get("speed_note"), no_landing=s.get("no_landing"),
+                type=s.get("type"), side=s.get("side"), type_basis=s.get("basis"),
             ))  # fmt: skip
         out_r.append(S.Rally(
             id=r["id"], start_frame=r["start_frame"], end_frame=r["end_frame"],

@@ -59,6 +59,8 @@ class PlayerStats(BaseModel):
     shot_speed_median_kmh: float | None = None
     shot_speed_max_kmh: float | None = None
     shot_speed_samples: int = 0
+    shot_types: dict[str, int] | None = None  # serve / overhead / lob / volley / groundstroke /
+    # unknown / forehand / backhand counts
 
 
 class TeamStats(BaseModel):
@@ -153,6 +155,10 @@ class Shot(BaseModel):
     speed_range_kmh: tuple[float, float] | None = None
     speed_note: str | None = None
     no_landing: Literal["probably_volley", "not_seen"] | None = None
+    # coarse shot type (stage 5c) and, for near players, forehand / backhand (right-handed)
+    type: Literal["serve", "overhead", "lob", "volley", "groundstroke", "unknown"] | None = None
+    side: Literal["forehand", "backhand"] | None = None
+    type_basis: str | None = None
 
 
 class Rally(BaseModel):

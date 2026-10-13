@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { useRallies, type Shot } from "@/lib/api";
-import { clock, num, pct, teamName, ZONE_LABEL } from "@/lib/format";
+import { useRallies, type PlayerStats, type Shot } from "@/lib/api";
+import { clock, num, pct, SHOT_TYPE_LABEL, SHOT_TYPES, teamName, ZONE_LABEL } from "@/lib/format";
 import { CourtSvg, LandingLayer } from "@/components/court";
 import { useMatch } from "@/components/match";
 import { Card, EmptyState, Skeleton, Stat, TeamDot } from "@/components/ui";
@@ -38,6 +38,8 @@ export function ShotsPage() {
         />
         <Stat label="Speed measured" value={num(measured.length)} hint={sp?.median_kmh != null ? `median ${num(sp.median_kmh)} km/h` : "too few to summarise"} />
       </Card>
+
+      <ShotTypes shots={shots} players={run.players} />
 
       <div className="grid gap-5 lg:grid-cols-2">
         {(["near", "far"] as const).map((team) => (
@@ -158,5 +160,64 @@ function SpeedTable({ id, shots }: { id: string; shots: Shot[] }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+function ShotTypes({ shots, players }: { shots: Shot[]; players: PlayerStats[] }) {
+  const typed = shots.filter((s) => s.type && s.type !== "unknown");
+  const count = (t: string) => typed.filter((s) => s.type === t).length;
+  const max = Math.max(1, ...SHOT_TYPES.map(count));
+  return (
+    <Card
+      title="Shot types"
+      description={`${typed.length} of ${shots.length} shots typed. Coarse types from where the ball was at contact and whether it bounced first. Forehand / backhand only for players near the camera, assuming they are right-handed.`}
+    >
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <div className="space-y-2">
+          {SHOT_TYPES.map((t) => (
+            <div key={t} className="grid grid-cols-[100px_1fr_32px] items-center gap-3 text-sm">
+              <span className="text-zinc-700">{SHOT_TYPE_LABEL[t]}</span>
+              <div className="h-2 rounded bg-zinc-100">
+                <div className="h-full rounded bg-zinc-500" style={{ width: `${(count(t) / max) * 100}%` }} />
+              </div>
+              <span className="tabular text-right text-zinc-900">{count(t)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-zinc-500">
+                <th className="pb-2 font-medium">Player</th>
+                {SHOT_TYPES.map((t) => (
+                  <th key={t} className="pb-2 text-right font-medium">
+                    {SHOT_TYPE_LABEL[t]}
+                  </th>
+                ))}
+                <th className="pb-2 text-right font-medium">Fore / back</th>
+              </tr>
+            </thead>
+            <tbody className="tabular divide-y divide-zinc-100">
+              {players.map((p) => {
+                const st = p.shot_types ?? {};
+                return (
+                  <tr key={p.player}>
+                    <td className="py-2 text-zinc-900">Player {p.player}</td>
+                    {SHOT_TYPES.map((t) => (
+                      <td key={t} className="py-2 text-right text-zinc-700">
+                        {p.shot_types ? (st[t] ?? 0) : "–"}
+                      </td>
+                    ))}
+                    <td className="py-2 text-right text-zinc-700">
+                      {st.forehand || st.backhand ? `${st.forehand ?? 0} / ${st.backhand ?? 0}` : "–"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Card>
   );
 }

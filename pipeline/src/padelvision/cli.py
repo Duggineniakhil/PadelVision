@@ -151,6 +151,27 @@ def _cmd_event_review_pack(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_shot_review_pack(args: argparse.Namespace) -> int:
+    from padelvision.shots_review import make_shot_pack
+
+    make_shot_pack(args.video, args.run, args.out, args.max_shots)
+    return 0
+
+
+def _cmd_label_shots(args: argparse.Namespace) -> int:
+    from padelvision.shots_review import run_labeler
+
+    run_labeler(args.pack)
+    return 0
+
+
+def _cmd_shots_eval(args: argparse.Namespace) -> int:
+    from padelvision.shots_review import score_shots
+
+    print(json.dumps(score_shots(args.pack), indent=2))
+    return 0
+
+
 def _cmd_label_events(args: argparse.Namespace) -> int:
     from padelvision.events_label_tool import run
 
@@ -318,6 +339,21 @@ def main(argv: list[str] | None = None) -> int:
                    help="long matches: share of the time for unclassified turns (e.g. 0.4); "
                    "windows are then sampled over the whole match")  # fmt: skip
     p.set_defaults(func=_cmd_event_review_pack)
+
+    p = sub.add_parser("shot-review-pack", help="short clips of the rally shots to check types")
+    p.add_argument("video")
+    p.add_argument("--run", required=True, help="run folder with rallies.json (shot types)")
+    p.add_argument("--out", required=True)
+    p.add_argument("--max-shots", type=int, default=120)
+    p.set_defaults(func=_cmd_shot_review_pack)
+
+    p = sub.add_parser("label-shots", help="label shot types in a shot pack (local, GUI)")
+    p.add_argument("pack", help="shot review pack folder with pack.json")
+    p.set_defaults(func=_cmd_label_shots)
+
+    p = sub.add_parser("shots-eval", help="score predicted shot types against your labels")
+    p.add_argument("pack", help="shot review pack folder with shot_labels.csv")
+    p.set_defaults(func=_cmd_shots_eval)
 
     p = sub.add_parser("label-events", help="label hits/bounces in an event pack (local, GUI)")
     p.add_argument("pack", help="event review pack folder with pack.json")
